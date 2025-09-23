@@ -1,45 +1,56 @@
-{{-- resources/views/auth/login.blade.php --}}
-<x-guest-layout>
-    <div class="mb-4 text-sm text-gray-600">
-        請輸入 Email 與密碼登入。
-    </div>
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>登入</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gray-50 flex items-center justify-center">
+  <div class="w-full max-w-md bg-white rounded-2xl shadow p-8">
+    <h1 class="text-2xl font-semibold text-center">帳號登入</h1>
 
-    <form method="POST" action="{{ route('login') }}" class="space-y-4" id="loginForm">
-        @csrf
 
-        <div>
-            <x-input-label for="email" value="Email" />
-            <x-text-input id="email" name="email" type="email"
-                class="block mt-1 w-full" :value="old('email')" required autofocus
-                autocomplete="username" />
-            <x-input-error :messages="$errors->get('email')" class="mt-2" />
-        </div>
+    {{-- 錯誤訊息（後端驗證/登入失敗） --}}
+    @if ($errors->any())
+      <div class="mt-4 rounded-lg border border-red-200 bg-red-50 text-red-700 p-3 text-sm">
+        @foreach ($errors->all() as $err)
+          <div>• {{ $err }}</div>
+        @endforeach
+      </div>
+    @endif
+    @if (session('login_error'))
+      <div class="mt-4 rounded-lg border border-red-200 bg-red-50 text-red-700 p-3 text-sm">
+        {{ session('login_error') }}
+      </div>
+    @endif
 
-        <div>
-            <x-input-label for="password" value="密碼" />
-            <x-text-input id="password" name="password" type="password"
-                class="block mt-1 w-full" required autocomplete="current-password" />
-            <x-input-error :messages="$errors->get('password')" class="mt-2" />
-        </div>
+    <form class="mt-6 space-y-4" method="POST" action="{{ route('auth.login') }}" novalidate>
+      @csrf
 
-        <div class="flex items-center justify-between mt-4">
-            <label for="remember" class="inline-flex items-center">
-                <input id="remember" type="checkbox" name="remember"
-                       class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500">
-                <span class="ms-2 text-sm text-gray-600">記住我</span>
-            </label>
+      <div>
+        <label for="account" class="block text-sm font-medium text-gray-700">帳號（account）</label>
+        <input id="account" name="account" type="text" autocomplete="username" required
+               value="{{ old('account') }}"
+               class="mt-1 w-full rounded-xl border-gray-300 focus:ring-indigo-500 focus:border-indigo-500">
+      </div>
 
-            @if (Route::has('password.request'))
-                <a class="underline text-sm text-gray-600 hover:text-gray-900"
-                   href="{{ route('password.request') }}">忘記密碼？</a>
-            @endif>
-        </div>
+      <div>
+        <label for="password" class="block text-sm font-medium text-gray-700">密碼（password）</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required
+               class="mt-1 w-full rounded-xl border-gray-300 focus:ring-indigo-500 focus:border-indigo-500">
+      </div>
 
-        <div class="flex items-center justify-between mt-6">
-            <a class="underline text-sm text-gray-600 hover:text-gray-900"
-               href="{{ route('register') }}">還沒有帳號？前往註冊</a>
+      <button type="submit"
+              class="w-full rounded-xl bg-indigo-600 text-white py-2.5 font-medium hover:bg-indigo-700">
+        登入
 
-            <x-primary-button>登入</x-primary-button>
-        </div>
+
+      </button>
     </form>
-</x-guest-layout>
+    
+  
+    </p>
+  </div>
+</body>
+</html>

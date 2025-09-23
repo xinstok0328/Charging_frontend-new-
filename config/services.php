@@ -1,5 +1,6 @@
 <?php
 
+
 return [
 
     /*
@@ -18,6 +19,7 @@ return [
     // .env 沒設時預設走本機 18081，你可以改成任何你想要的預設值
     'base' => env('EXT_API_BASE', 'http://127.0.0.1:18081'),
 ],
+
 
 
 
@@ -41,5 +43,12 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
+
+         'google' => [
+            'maps_key' => env('GOOGLE_MAPS_API_KEY'),
+     ],
+        'charger_api' => [
+         'base' => rtrim(env('CHARGER_API_BASE', ''), '/'),
+      ],
 
 ];
