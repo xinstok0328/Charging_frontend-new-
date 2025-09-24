@@ -19,7 +19,7 @@ Route::middleware('guest')->group(function () {
 
     // 登入：你的前端會送到 route('auth.login') => POST /auth/login
     Route::post('/auth/login', [ExternalAuthController::class, 'login'])->name('auth.login');
-
+    Route::post('login', [AuthenticatedSessionController::class, 'store']);
      Route::get('/auth/login', fn () => response('Use POST /auth/login', 405));
      Route::post('/logout', [ExternalAuthController::class, 'logout'])->name('logout');
 

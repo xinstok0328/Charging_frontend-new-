@@ -29,12 +29,6 @@
         </div>
 
         <div>
-            <x-input-label for="about" value="關於我" />
-            <x-text-input id="about" name="about" type="text"
-                class="block mt-1 w-full" :value="old('about')" />
-        </div>
-
-        <div>
             <x-input-label for="email" value="※ Email" />
             <x-text-input id="email" name="email" type="email"
                 class="block mt-1 w-full" :value="old('email')" required autocomplete="username"/>
@@ -47,11 +41,6 @@
                 class="block mt-1 w-full" :value="old('phone')" />
         </div>
 
-        <div>
-            <x-input-label for="role_id" value="角色（數字）" />
-            <x-text-input id="role_id" name="role_id" type="number" min="0" step="1"
-                class="block mt-1 w-full" :value="old('role_id', 0)" />
-        </div>
 
         {{-- Breeze 預設會處理的欄位 --}}
         <div class="pt-2">
