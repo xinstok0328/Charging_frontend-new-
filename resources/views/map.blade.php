@@ -6,7 +6,9 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <style>
-    #map { height: 600px; }
+    html, body { height: 100%; margin: 0; }
+    body { overflow: hidden; }
+    #map { height: 80vh; }
     
     /* 頁面頂部按鈕區域樣式 */
     .header-controls {
@@ -370,6 +372,17 @@
       }
     }
 
+    function resizeMapContainer() {
+      const header = document.querySelector('.header-controls');
+      const headerHeight = header ? header.offsetHeight : 0;
+      const mapEl = document.getElementById('map');
+      if (mapEl) {
+        mapEl.style.height = Math.max(200, window.innerHeight - headerHeight) + 'px';
+      }
+      if (typeof map !== 'undefined' && map) {
+        setTimeout(() => map.invalidateSize(), 0);
+      }
+    }
     // 初始化地圖
     function initializeMap() {
       // 建立地圖實例
@@ -748,10 +761,14 @@
     // 頁面載入完成後初始化
     document.addEventListener('DOMContentLoaded', function() {
       initializeCSRFToken();
+      resizeMapContainer();
       initializeMap();
       handlePasswordForm();
       handleRegisterForm();
     });
+
+    // 視窗大小改變時重新調整地圖容器高度
+    window.addEventListener('resize', resizeMapContainer);
   </script>
 </body>
 </html>
