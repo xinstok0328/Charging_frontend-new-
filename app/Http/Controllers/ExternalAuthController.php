@@ -128,6 +128,8 @@ class ExternalAuthController extends Controller
             Session::put('user_authenticated', true);
             Session::put('user_account', $credentials['account']);
             Session::put('auth_token', $token);
+            Session::put('user_data', $userData);
+            Session::put('auth_token', $token);
             
             // 儲存完整的用戶資料
             Session::put('user_data', [
@@ -176,126 +178,355 @@ class ExternalAuthController extends Controller
         }
     }
 
+
+    /**
+ * 獲取用戶資訊方法 - 直接串接後端 API
+ */
+public function getUserInfo(Request $request): JsonResponse
+{
+    // 檢查用戶是否已登入（保留基本認證檢查）
+    $isAuthenticated = Session::get('user_authenticated', false);
+    $hasToken = !empty(Session::get('auth_token'));
+    
+    if (!$isAuthenticated && !$hasToken) {
+        Log::warning('Unauthorized getUserInfo attempt', [
+            'session_id' => Session::getId(),
+            'user_authenticated' => $isAuthenticated,
+            'has_token' => $hasToken
+        ]);
+        
+        return response()->json([
+            'success' => false,
+            'message' => '請先登入',
+        ], 401);
+    }
+
+    // 註解掉 Session 資料檢查，強制調用後端 API
+    /*
+    // 優先從 session 獲取用戶資料
+    $userData = Session::get('user_data');
+    
+    // 如果 session 中有完整的用戶資料，直接返回
+    if ($userData && !empty($userData['account'])) {
+        Log::info('Returning user data from session', [
+            'account' => $userData['account'],
+            'session_id' => Session::getId()
+        ]);
+        
+        return response()->json([
+            'success' => true,
+            'data' => $userData
+        ], 200);
+    }
+    */
+
+    // 獲取認證 token
+    $token = Session::get('auth_token');
+    if (!$token) {
+        Log::warning('No auth token found for getUserInfo');
+        
+        return response()->json([
+            'success' => false,
+            'message' => '認證令牌無效，請重新登入',
+        ], 401);
+    }
+
+    // 強制調用外部 API 獲取用戶資料
+    Log::info('Forcing API call for user info', [
+        'token_length' => strlen($token),
+        'session_id' => Session::getId()
+    ]);
+
+    return $this->fetchUserInfoFromAPI($token, $request);
+}
+
+
+
     /**
      * 新增：獲取用戶資訊方法 - 對應前端的 /user/info 路由
      */
-    public function getUserInfo(Request $request): JsonResponse
-    {
-        // 檢查用戶是否已登入
-        if (!Session::get('user_authenticated', false)) {
-            Log::warning('Unauthorized getUserInfo attempt', [
-                'session_id' => Session::getId(),
-                'user_authenticated' => Session::get('user_authenticated', false),
-                'has_token' => !empty(Session::get('auth_token'))
-            ]);
-            
-            return response()->json([
-                'success' => false,
-                'message' => '請先登入',
-            ], 401);
-        }
+    // public function getUserInfo(Request $request): JsonResponse
+    // {
 
-        // 優先從 session 獲取用戶資料
-        $userData = Session::get('user_data');
+
+    //     // 檢查用戶是否已登入
+    //     $isAuthenticated = Session::get('user_authenticated', false);
+    // $hasToken = !empty(Session::get('auth_token'));
+
+    //  Log::info('getUserInfo called with session data', [
+    //     'session_id' => Session::getId(),
+    //     'user_authenticated' => Session::get('user_authenticated'),
+    //     'has_auth_token' => !empty(Session::get('auth_token')),
+    //     'session_all' => Session::all()
+    // ]);
+    
+    // // 如果沒有認證標誌但有 token，也允許通過
+    // if (!$isAuthenticated && !$hasToken) {
+    //     Log::warning('Unauthorized getUserInfo attempt', [
+    //         'session_id' => Session::getId(),
+    //         'user_authenticated' => $isAuthenticated,
+    //         'has_token' => $hasToken
+    //     ]);
         
-        // 如果 session 中有完整的用戶資料，直接返回
-        if ($userData && !empty($userData['account'])) {
-            Log::info('Returning user data from session', [
-                'account' => $userData['account'],
-                'session_id' => Session::getId()
-            ]);
+    //     return response()->json([
+    //         'success' => false,
+    //         'message' => '請先登入',
+    //     ], 401);
+    // }
+
+    //     // 優先從 session 獲取用戶資料
+    //     $userData = Session::get('user_data');
+        
+    //     // 如果 session 中有完整的用戶資料，直接返回
+    //     if ($userData && !empty($userData['account'])) {
+    //         Log::info('Returning user data from session', [
+    //             'account' => $userData['account'],
+    //             'session_id' => Session::getId()
+    //         ]);
             
-            return response()->json([
-                'success' => true,
-                'data' => $userData
-            ], 200);
-        }
+    //         return response()->json([
+    //             'success' => true,
+    //             'data' => $userData
+    //         ], 200);
+    //     }
 
-        // 如果 session 中沒有用戶資料，嘗試從外部 API 獲取
-        $token = Session::get('auth_token');
-        if (!$token) {
-            Log::warning('No auth token found for getUserInfo');
+    //     // 如果 session 中沒有用戶資料，嘗試從外部 API 獲取
+    //     $token = Session::get('auth_token');
+    //     if (!$token) {
+    //         Log::warning('No auth token found for getUserInfo');
             
-            return response()->json([
-                'success' => false,
-                'message' => '認證令牌無效，請重新登入',
-            ], 401);
-        }
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => '認證令牌無效，請重新登入',
+    //         ], 401);
+    //     }
 
-        // 呼叫外部 API 獲取用戶資料
-        return $this->fetchUserInfoFromAPI($token, $request);
-    }
+    //     // 呼叫外部 API 獲取用戶資料
+    //     return $this->fetchUserInfoFromAPI($token, $request);
+    // }
 
+
+
+    
     /**
-     * 從外部 API 獲取用戶資訊
-     */
-    private function fetchUserInfoFromAPI(string $token, Request $request): JsonResponse
-    {
-        $base = config('services.backend.base_url', env('BACKEND_BASE_URL', 'http://120.110.115.126:18081'));
-        $endpoint = rtrim($base, '/') . '/user/info';
+ * 從外部 API 獲取用戶資訊
+ */
+private function fetchUserInfoFromAPI(string $token, Request $request): JsonResponse
+{
+    // 使用正確的環境變數 - 與您的 .env 一致
+    $base = config('services.backend.base_url', env('EXT_API_BASE', 'http://120.110.115.126:18081'));
+    $endpoint = rtrim($base, '/') . '/user/info';
 
-        try {
-            Log::info('Fetching user info from external API', [
-                'endpoint' => $endpoint,
-                'token_length' => strlen($token)
-            ]);
+    try {
+        Log::info('Fetching user info from external API', [
+            'endpoint' => $endpoint,
+            'token_length' => strlen($token),
+            'session_id' => Session::getId()
+        ]);
 
-            $response = Http::timeout(15)
-                ->withHeaders([
-                    'Accept' => 'application/json',
-                    'Content-Type' => 'application/json',
-                    'Authorization' => 'Bearer ' . $token,
-                ])
-                ->get($endpoint);
+        $response = Http::timeout(15)
+            ->withHeaders([
+                'Accept' => 'application/json',
+                'Content-Type' => 'application/json',
+                'Authorization' => 'Bearer ' . $token,
+            ])
+            ->get($endpoint);
 
-            Log::info('External API user info response', [
-                'status' => $response->status(),
-                'success' => $response->successful(),
-                'body' => $response->json()
-            ]);
+        Log::info('External API user info response', [
+            'status' => $response->status(),
+            'success' => $response->successful(),
+            'body' => $response->json()
+        ]);
 
-            if ($response->failed()) {
-                Log::warning('External user info API failed', [
+        // 根據 API 文檔處理不同的回應狀態
+        switch ($response->status()) {
+            case 200:
+                // 成功回應
+                $apiData = $response->json();
+                
+                if (isset($apiData['success']) && $apiData['success'] === true && isset($apiData['data'])) {
+                    // 處理用戶資料，確保格式一致
+                    $userData = $apiData['data'];
+                    
+                    // 標準化用戶資料格式
+                    $standardizedUserData = [
+                        'id' => $userData['id'] ?? null,
+                        'account' => $userData['account'] ?? Session::get('user_account'),
+                        'name' => $userData['name'] ?? null,
+                        'email' => $userData['email'] ?? null,
+                        'phone' => $userData['phone'] ?? null,
+                        'role_name' => $userData['role_name'] ?? null,
+                        'role_code' => $userData['role_code'] ?? null,
+                        'create_time' => $userData['create_time'] ?? null,
+                        'modify_time' => $userData['modify_time'] ?? null,
+                        'user_img_responses' => $userData['user_img_responses'] ?? []
+                    ];
+                    
+                    // 更新 session 中的用戶資料
+                    Session::put('user_data', $standardizedUserData);
+                    
+                    Log::info('Successfully fetched and updated user data', [
+                        'user_id' => $standardizedUserData['id'],
+                        'account' => $standardizedUserData['account']
+                    ]);
+                    
+                    return response()->json([
+                        'success' => true,
+                        'code' => 0,
+                        'message' => '獲取用戶資料成功',
+                        'data' => $standardizedUserData
+                    ], 200);
+                    
+                } else {
+                    Log::warning('API returned success=false or missing data', [
+                        'response' => $apiData
+                    ]);
+                    
+                    return response()->json([
+                        'success' => false,
+                        'code' => 1,
+                        'message' => '用戶資料格式錯誤',
+                        'data' => []
+                    ], 500);
+                }
+                break;
+                
+            case 400:
+                // Bad Request
+                Log::warning('Bad request to user info API', [
+                    'status' => $response->status(),
+                    'body' => $response->body()
+                ]);
+                
+                return response()->json([
+                    'success' => false,
+                    'code' => 1,
+                    'message' => '請求格式錯誤',
+                    'data' => []
+                ], 400);
+                
+            case 401:
+                // Unauthorized - 認證失敗
+                Log::warning('Unauthorized access to user info API', [
                     'status' => $response->status(),
                     'body' => $response->body(),
+                    'token_length' => strlen($token)
                 ]);
-
-                // 如果是認證失敗，清除 session
-                if ($response->status() === 401) {
-                    $this->clearAuthSession();
-                }
-
+                
+                // 清除過期的認證資訊
+                $this->clearAuthSession();
+                
                 return response()->json([
                     'success' => false,
-                    'message' => '獲取用戶資料失敗',
-                ], $response->status());
-            }
-
-            $apiData = $response->json();
-            
-            // 檢查 API 回應格式並更新 session
-            if (isset($apiData['success']) && $apiData['success'] === true && isset($apiData['data'])) {
-                Session::put('user_data', $apiData['data']);
-                return response()->json($apiData, 200);
-            } else {
+                    'code' => 1,
+                    'message' => '認證失敗，請重新登入',
+                    'data' => []
+                ], 401);
+                
+            case 403:
+                // Forbidden - 沒有權限
+                Log::warning('Forbidden access to user info API', [
+                    'status' => $response->status(),
+                    'body' => $response->body()
+                ]);
+                
                 return response()->json([
                     'success' => false,
-                    'message' => '用戶資料格式錯誤',
+                    'code' => 1,
+                    'message' => '沒有權限訪問用戶資料',
+                    'data' => []
+                ], 403);
+                
+            case 404:
+                // Not Found - 用戶不存在
+                Log::warning('User not found in API', [
+                    'status' => $response->status(),
+                    'body' => $response->body()
+                ]);
+                
+                return response()->json([
+                    'success' => false,
+                    'code' => 1,
+                    'message' => '用戶資料不存在',
+                    'data' => []
+                ], 404);
+                
+            case 500:
+                // Internal Server Error
+                Log::error('Internal server error from user info API', [
+                    'status' => $response->status(),
+                    'body' => $response->body()
+                ]);
+                
+                return response()->json([
+                    'success' => false,
+                    'code' => 1,
+                    'message' => '伺服器內部錯誤，請稍後再試',
+                    'data' => []
                 ], 500);
-            }
-
-        } catch (\Throwable $e) {
-            Log::error('External user info HTTP exception', [
-                'endpoint' => $endpoint,
-                'error' => $e->getMessage(),
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => '查詢服務暫時不可用',
-            ], 503);
+                
+            default:
+                // 其他未預期的狀態碼
+                Log::warning('Unexpected status code from user info API', [
+                    'status' => $response->status(),
+                    'body' => $response->body()
+                ]);
+                
+                return response()->json([
+                    'success' => false,
+                    'code' => 1,
+                    'message' => '獲取用戶資料時發生未預期的錯誤',
+                    'data' => []
+                ], $response->status());
         }
+
+    } catch (\Illuminate\Http\Client\ConnectionException $e) {
+        // 網路連線錯誤
+        Log::error('Connection error to user info API', [
+            'endpoint' => $endpoint,
+            'error' => $e->getMessage(),
+            'error_type' => 'ConnectionException'
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'code' => 1,
+            'message' => '無法連接到伺服器，請檢查網路連線',
+            'data' => []
+        ], 503);
+        
+    } catch (\Illuminate\Http\Client\RequestException $e) {
+        // HTTP 請求錯誤
+        Log::error('Request error to user info API', [
+            'endpoint' => $endpoint,
+            'error' => $e->getMessage(),
+            'error_type' => 'RequestException'
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'code' => 1,
+            'message' => '請求用戶資料時發生錯誤',
+            'data' => []
+        ], 503);
+        
+    } catch (\Throwable $e) {
+        // 其他所有錯誤
+        Log::error('Unexpected error in user info API call', [
+            'endpoint' => $endpoint,
+            'error' => $e->getMessage(),
+            'error_type' => get_class($e),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'code' => 1,
+            'message' => '查詢服務暫時不可用',
+            'data' => []
+        ], 503);
     }
+}
 
     /**
      * 原有的 userInfo 方法 - 保持兼容性

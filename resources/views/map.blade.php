@@ -512,12 +512,15 @@
           const user = data.data;
           userInfoHtml = `
             <table class="user-info-table">
-              <tr><td>帳號:</td><td>${user.account || 'N/A'}</td></tr>
-              <tr><td>姓名:</td><td>${user.name || 'N/A'}</td></tr>
-              <tr><td>暱稱:</td><td>${user.nick_name || 'N/A'}</td></tr>
-              <tr><td>角色ID:</td><td>${user.role_id || 'N/A'}</td></tr>
-              <tr><td>角色名稱:</td><td>${user.role_name || 'N/A'}</td></tr>
-              <tr><td>角色代碼:</td><td>${user.role_code || 'N/A'}</td></tr>
+            <tr><td>用戶ID:</td><td>${user.id || 'N/A'}</td></tr>
+            <tr><td>帳號:</td><td>${user.account || 'N/A'}</td></tr>
+            <tr><td>姓名:</td><td>${user.name || 'N/A'}</td></tr>
+            <tr><td>電子郵件:</td><td>${user.email || 'N/A'}</td></tr>
+            <tr><td>手機:</td><td>${user.phone || 'N/A'}</td></tr>
+            <tr><td>角色名稱:</td><td>${user.role_name || 'N/A'}</td></tr>
+            <tr><td>角色代碼:</td><td>${user.role_code || 'N/A'}</td></tr>
+            <tr><td>建立時間:</td><td>${user.create_time || 'N/A'}</td></tr>
+            <tr><td>修改時間:</td><td>${user.modify_time || 'N/A'}</td></tr>
             </table>
           `;
         } else {
