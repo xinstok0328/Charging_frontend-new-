@@ -14,6 +14,7 @@ use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\MapController;
 use App\Http\Controllers\TariffController; // 新增費率控制器
 // use App\Http\Controllers\UserController; // 如果需要的話取消註解
+//10/1 上傳的檔案有合併過路徑，如果有問題先檢查這邊
 
 // ------------ 未登入可訪問 ------------
 Route::middleware('guest')->group(function () {
