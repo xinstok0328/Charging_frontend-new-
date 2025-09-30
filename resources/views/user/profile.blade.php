@@ -19,20 +19,8 @@
         <form id="form-profile" class="space-y-4">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-sm text-gray-600">帳號（account）</label>
-                    <input name="account" class="w-full rounded-md border px-3 py-2" />
-                </div>
-                <div>
                     <label class="block text-sm text-gray-600">姓名（name）</label>
                     <input name="name" class="w-full rounded-md border px-3 py-2" />
-                </div>
-                <div>
-                    <label class="block text-sm text-gray-600">暱稱（nick_name）</label>
-                    <input name="nick_name" class="w-full rounded-md border px-3 py-2" />
-                </div>
-                <div>
-                    <label class="block text-sm text-gray-600">生日（birthday, YYYY-MM-DD）</label>
-                    <input name="birthday" type="date" class="w-full rounded-md border px-3 py-2" />
                 </div>
                 <div>
                     <label class="block text-sm text-gray-600">Email（email）</label>
@@ -41,6 +29,10 @@
                 <div>
                     <label class="block text-sm text-gray-600">手機（phone）</label>
                     <input name="phone" class="w-full rounded-md border px-3 py-2" />
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-600">檔案ID（file_id）</label>
+                    <input name="file_id" type="number" class="w-full rounded-md border px-3 py-2" />
                 </div>
             </div>
 
@@ -108,13 +100,13 @@ const API_CONFIG = {
     BASE_URL: '{{ env("API_BASE_URL", "http://120.110.115.126:18081") }}',
     PATHS: {
         getProfile:      '/user/info',
-        updateProfile:   '/user/info',        // 依後端實際變更 PUT 或 PATCH
-        updatePassword:  '/auth/password',
+        updateProfile:   '/user/update_profile',  // 使用Laravel路由
+        updatePassword:  '/user/update_pwd',       // 使用Laravel路由
         deleteUser:      '/user/delete'
     },
     // 允許三種來源，依你實際情況擇一即可
     get token() {
-        return @json(session('api_token')) || localStorage.getItem('access_token') || '';
+        return @json(session('auth_token')) || localStorage.getItem('access_token') || '';
     }
 };
 
@@ -194,17 +186,21 @@ async function submitProfile(e) {
     e.preventDefault();
     const f = e.target;
     const payload = {
-        account: f.account.value?.trim(),
         name: f.name.value?.trim(),
-        nick_name: f.nick_name.value?.trim(),
-        birthday: f.birthday.value || null,
         email: f.email.value?.trim(),
-        phone: f.phone.value?.trim()
+        phone: f.phone.value?.trim() || undefined,
+        file_id: f.file_id?.value ? Number(f.file_id.value) : 0
     };
     try {
-        const res = await safeFetch(API_CONFIG.BASE_URL + API_CONFIG.PATHS.updateProfile, {
-            method: 'PUT', // or 'PATCH'
-            headers: headers(true),
+        // 使用Laravel路由，不需要BASE_URL
+        const res = await fetch(API_CONFIG.PATHS.updateProfile, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
             body: JSON.stringify(payload)
         });
         const json = await res.json().catch(()=>({}));
@@ -214,10 +210,8 @@ async function submitProfile(e) {
         flash('基本資料已更新！', 'success');
         loadProfile();
     } catch (e) {
-        if (e.message !== 'HTTP_401' && e.message !== 'MISSING_TOKEN') {
-            console.error(e);
-            flash('更新失敗：' + e.message, 'error');
-        }
+        console.error(e);
+        flash('更新失敗：' + e.message, 'error');
     }
 }
 

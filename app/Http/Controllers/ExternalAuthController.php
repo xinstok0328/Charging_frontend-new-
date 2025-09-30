@@ -579,6 +579,26 @@ private function fetchUserInfoFromAPI(string $token, Request $request): JsonResp
     }
 
     /**
+     * 回傳目前使用者的 Session token（需已登入）
+     */
+    public function getSessionToken(): JsonResponse
+    {
+        $token = Session::get('auth_token');
+
+        if (empty($token)) {
+            return response()->json([
+                'success' => false,
+                'message' => '未找到 token，請先登入',
+            ], 401);
+        }
+
+        return response()->json([
+            'success' => true,
+            'token' => $token,
+        ], 200);
+    }
+
+    /**
      * 測試後端連線
      */
     public function testConnection(): JsonResponse
@@ -787,6 +807,187 @@ private function fetchUserInfoFromAPI(string $token, Request $request): JsonResp
             return response()->json([
                 'success' => false,
                 'message' => $errorMessage,
+            ], 400);
+        }
+    }
+
+    /**
+     * 更新會員資料
+     */
+    public function updateProfile(Request $request): JsonResponse
+    {
+        // 驗證請求參數（僅允許這四個欄位）
+        $request->validate([
+            'name' => 'required|string',
+            'email' => 'required|email',
+            'phone' => 'nullable|string',
+            'file_id' => 'nullable|integer',
+        ]);
+
+        // 檢查使用者是否已登入
+        if (!Session::get('user_authenticated', false)) {
+            Log::warning('Unauthorized profile update attempt', [
+                'session_id' => Session::getId(),
+                'user_authenticated' => Session::get('user_authenticated', false)
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => '請先登入',
+            ], 401);
+        }
+
+        // 獲取認證 token
+        $token = Session::get('auth_token');
+        if (!$token) {
+            Log::warning('No auth token found for profile update');
+            
+            return response()->json([
+                'success' => false,
+                'message' => '認證令牌無效，請重新登入',
+            ], 401);
+        }
+
+        // 設定外部 API 端點
+        $base = config('services.backend.base_url', env('BACKEND_BASE_URL', 'http://120.110.115.126:18081'));
+
+        // 取得使用者 ID（先從 session，沒有就打 /user/info 補齊）
+        $userData = Session::get('user_data', []);
+        $userId = $userData['id'] ?? null;
+        if (!$userId) {
+            try {
+                $infoEndpoint = rtrim($base, '/') . '/user/info';
+                $infoResp = Http::timeout(10)
+                    ->withHeaders([
+                        'Accept' => 'application/json',
+                        'Content-Type' => 'application/json',
+                        'Authorization' => 'Bearer ' . $token,
+                    ])->get($infoEndpoint);
+                if ($infoResp->successful()) {
+                    $infoJson = $infoResp->json();
+                    $fromApi = $infoJson['data'] ?? [];
+                    $userId = $fromApi['id'] ?? null;
+                    if (!empty($fromApi)) {
+                        Session::put('user_data', array_merge($userData, $fromApi));
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Fetch user info before update failed', ['error' => $e->getMessage()]);
+            }
+        }
+
+        if (!$userId) {
+            return response()->json([
+                'success' => false,
+                'message' => '找不到使用者 ID，請重新整理或重新登入後再試',
+            ], 400);
+        }
+
+        // 依文件：PUT /user/update/{id}
+        $endpoint = rtrim($base, '/') . '/user/update/' . urlencode((string) $userId);
+
+        try {
+            Log::info('Profile update API request', [
+                'endpoint' => $endpoint,
+                'user_account' => Session::get('user_account'),
+                'token_length' => strlen($token),
+                'update_data' => $request->only(['name', 'email', 'phone', 'file_id'])
+            ]);
+
+            // 組裝僅包含有效值的負載
+            $payload = [
+                'name' => $request->input('name'),
+                'email' => $request->input('email'),
+                'phone' => $request->input('phone'),
+                'file_id' => (int) ($request->input('file_id', 0)),
+                // 同時提供 camelCase 與 snake_case，避免後端鍵名不同導致 400
+                'fileId' => (int) ($request->input('file_id', $request->input('fileId', 0))),
+            ];
+
+            // 調用外部 API 進行會員資料更新
+            $response = Http::timeout(15)
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'Authorization' => 'Bearer ' . $token,
+                ])
+                ->put($endpoint, $payload);
+
+            Log::info('Profile update API response', [
+                'status' => $response->status(),
+                'success' => $response->successful(),
+                'body' => $response->json()
+            ]);
+
+        } catch (\Throwable $e) {
+            Log::error('External profile update HTTP exception', [
+                'endpoint' => $endpoint,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => '會員資料更新服務暫時無法使用',
+            ], 503);
+        }
+
+        // 檢查 HTTP 響應狀態
+        if ($response->failed()) {
+            $errorData = $response->json();
+            $errorMessage = $errorData['message'] ?? '會員資料更新失敗';
+
+            Log::warning('Profile update API failed', [
+                'status' => $response->status(),
+                'response' => $errorData
+            ]);
+
+            // 根據不同的 HTTP 狀態碼返回適當的錯誤訊息
+            $statusCode = $response->status();
+            if ($statusCode === 401) {
+                $errorMessage = '認證已過期，請重新登入';
+                $this->clearAuthSession(); // 清除過期的認證
+            } elseif ($statusCode === 422) {
+                $errorMessage = '資料格式不符合要求';
+            } elseif ($statusCode === 400) {
+                $errorMessage = '請求參數錯誤';
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => $errorMessage,
+                'backend' => $errorData,
+            ], $statusCode === 401 ? 401 : 400);
+        }
+
+        $updateData = $response->json();
+
+        // 檢查 API 響應格式
+        if (isset($updateData['success']) && $updateData['success'] === true) {
+            Log::info('Profile update successful', [
+                'user_account' => Session::get('user_account'),
+                'response' => $updateData
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => '會員資料更新成功',
+                'data' => $updateData['data'] ?? null
+            ], 200);
+
+        } else {
+            // 更新失敗
+            $errorMessage = $updateData['message'] ?? '會員資料更新失敗';
+            
+            Log::warning('Profile update failed', [
+                'user_account' => Session::get('user_account'),
+                'response' => $updateData
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => $errorMessage,
+                'backend' => $updateData,
             ], 400);
         }
     }

@@ -58,6 +58,16 @@
       color: white;
     }
     
+    .btn-update-profile {
+      background-color: #6f42c1;
+      color: white;
+    }
+    
+    .btn-update-profile:hover {
+      background-color: #5a32a3;
+      color: white;
+    }
+    
     .btn-change-password {
       background-color: #ffc107;
       color: #212529;
@@ -192,6 +202,26 @@
       cursor: not-allowed;
     }
     
+    .btn-cancel {
+      background-color: #e9ecef;
+      color: #333;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+      width: 100%;
+    }
+
+    .btn-cancel:hover {
+      background-color: #dde2e6;
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 10px;
+    }
+    
     .user-info-table {
       width: 100%;
       border-collapse: collapse;
@@ -250,6 +280,9 @@
       <button onclick="showUserInfo()" class="control-btn btn-user-info">
         👤 查看用戶資料
       </button>
+      <button onclick="showUpdateProfile()" class="control-btn btn-update-profile">
+        ✏️ 更新資料
+      </button>
       <button onclick="showChangePassword()" class="control-btn btn-change-password">
         🔒 更改密碼
       </button>
@@ -297,6 +330,40 @@
           <input type="password" id="newPassword" name="password" required>
         </div>
         <button type="submit" class="btn-submit">更新密碼</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- 更新資料 Modal -->
+  <div id="updateProfileModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">更新會員資料</h3>
+        <button class="close" onclick="closeModal('updateProfileModal')">&times;</button>
+      </div>
+      <form id="updateProfileForm">
+        <div id="updateProfileAlert"></div>
+        
+        <div class="form-group">
+          <label for="updateName">姓名:</label>
+          <input type="text" id="updateName" name="name" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="updateEmail">Email:</label>
+          <input type="email" id="updateEmail" name="email" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="updatePhone">手機:</label>
+          <input type="text" id="updatePhone" name="phone">
+        </div>
+        
+        
+        <div class="form-actions">
+          <button type="button" class="btn-cancel" onclick="closeModal('updateProfileModal')">取消</button>
+          <button type="submit" class="btn-submit">更新資料</button>
+        </div>
       </form>
     </div>
   </div>
@@ -541,6 +608,36 @@
       document.getElementById('passwordAlert').innerHTML = '';
     }
 
+    // 顯示更新資料 Modal
+    async function showUpdateProfile() {
+      try {
+        document.getElementById('updateProfileModal').style.display = 'block';
+        document.getElementById('updateProfileAlert').innerHTML = '';
+        
+        // 載入現有用戶資料
+        const response = await fetch('/user/info', {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': csrfToken
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data) {
+            const user = data.data;
+            document.getElementById('updateName').value = user.name || '';
+            document.getElementById('updateEmail').value = user.email || '';
+            document.getElementById('updatePhone').value = user.phone || '';
+          }
+        }
+      } catch (error) {
+        console.error('Error loading user profile:', error);
+        document.getElementById('updateProfileAlert').innerHTML = '<div class="alert alert-error">載入用戶資料時發生錯誤</div>';
+      }
+    }
+
     // 顯示註冊 Modal
     function showRegister() {
       document.getElementById('registerModal').style.display = 'block';
@@ -631,6 +728,96 @@
           if (submitBtn) {
             submitBtn.disabled = false;
             submitBtn.textContent = '更新密碼';
+          }
+        }
+      });
+    }
+
+    // 處理更新資料表單
+    function handleUpdateProfileForm() {
+      document.getElementById('updateProfileForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(e.target);
+        const data = Object.fromEntries(formData.entries());
+        const alertDiv = document.getElementById('updateProfileAlert');
+        
+        // 清除之前的提示
+        alertDiv.innerHTML = '';
+        
+        // 驗證必填欄位
+        if (!data.name || !data.email) {
+          alertDiv.innerHTML = '<div class="alert alert-error">請填寫所有必填欄位！</div>';
+          return;
+        }
+        
+        // 驗證Email格式
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(data.email)) {
+          alertDiv.innerHTML = '<div class="alert alert-error">請輸入有效的Email格式！</div>';
+          return;
+        }
+
+        try {
+          const submitBtn = document.querySelector('#updateProfileForm .btn-submit');
+          submitBtn.disabled = true;
+          submitBtn.textContent = '更新中...';
+
+          // 檢查是否有 CSRF token
+          if (!csrfToken) {
+            alertDiv.innerHTML = '<div class="alert alert-error">安全驗證失敗，請重新整理頁面</div>';
+            return;
+          }
+
+          const response = await fetch('/user/update_profile', {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'X-CSRF-TOKEN': csrfToken,
+              'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+              name: data.name?.trim(),
+              email: data.email?.trim(),
+              phone: data.phone?.trim() || undefined
+            })
+          });
+
+          let responseData = {};
+          try {
+            responseData = await response.json();
+          } catch (jsonError) {
+            console.error('JSON parse error:', jsonError);
+            responseData = { message: '伺服器回應格式錯誤' };
+          }
+
+          if (response.ok && responseData.success) {
+            alertDiv.innerHTML = '<div class="alert alert-success">會員資料更新成功！</div>';
+            setTimeout(() => {
+              closeModal('updateProfileModal');
+            }, 2000);
+          } else {
+            let errorMessage = '更新會員資料失敗';
+            
+            if (response.status === 401) {
+              errorMessage = '身份驗證失敗，請重新登入';
+            } else if (response.status === 422) {
+              errorMessage = '資料格式不正確';
+            } else if (responseData.message) {
+              errorMessage = responseData.message;
+            }
+            
+            alertDiv.innerHTML = `<div class="alert alert-error">${errorMessage}</div>`;
+          }
+        } catch (error) {
+          console.error('Error updating profile:', error);
+          alertDiv.innerHTML = '<div class="alert alert-error">網路連線錯誤，請檢查網路狀態</div>';
+        } finally {
+          const submitBtn = document.querySelector('#updateProfileForm .btn-submit');
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = '更新資料';
           }
         }
       });
@@ -748,6 +935,7 @@
     window.onclick = function(event) {
       const userModal = document.getElementById('userInfoModal');
       const passwordModal = document.getElementById('changePasswordModal');
+      const updateProfileModal = document.getElementById('updateProfileModal');
       const registerModal = document.getElementById('registerModal');
       
       if (event.target == userModal) {
@@ -755,6 +943,9 @@
       }
       if (event.target == passwordModal) {
         passwordModal.style.display = 'none';
+      }
+      if (event.target == updateProfileModal) {
+        updateProfileModal.style.display = 'none';
       }
       if (event.target == registerModal) {
         registerModal.style.display = 'none';
@@ -767,6 +958,7 @@
       resizeMapContainer();
       initializeMap();
       handlePasswordForm();
+      handleUpdateProfileForm();
       handleRegisterForm();
     });
 

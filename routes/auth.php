@@ -43,12 +43,14 @@ Route::middleware('guest')->group(function () {
 
     // 驗證狀態檢查
     Route::get('/auth/status', [ExternalAuthController::class, 'checkAuthStatus'])->name('auth.status');
-
-    Route::get('/user/info', [ExternalAuthController::class, 'userInfo'])->name('user.info');
+    
+    // 測試頁面
+    Route::get('/test-auth', function () { return view('test-auth'); });
+    Route::get('/test-login', function () { return view('test-login'); });
 });
 
 // ------------ 已登入可訪問 ------------
-Route::middleware('auth')->group(function () {
+Route::middleware('custom.auth')->group(function () {
     // Email 驗證流程
     Route::get('/verify-email', EmailVerificationPromptController::class)->name('verification.notice');
     Route::get('/verify-email/{id}/{hash}', VerifyEmailController::class)
@@ -74,11 +76,20 @@ Route::middleware('auth')->group(function () {
         return view('dashboard');
     })->middleware(['auth', 'verified'])->name('dashboard');
 
+    // 用戶資訊
+    Route::get('/user/info', [ExternalAuthController::class, 'userInfo'])->name('user.info');
+    
     // 更新密碼
     Route::post('/user/update_pwd', [ExternalAuthController::class, 'updatePassword'])->name('user.update_pwd');
     
+    // 更新會員資料
+    Route::put('/user/update_profile', [ExternalAuthController::class, 'updateProfile'])->name('user.update_profile');
+    
     // 登出 - 移到這裡因為需要驗證
     Route::post('/logout', [ExternalAuthController::class, 'logout'])->name('logout');
+
+	// 取得目前 Session 中的 token
+	Route::get('/auth/token', [ExternalAuthController::class, 'getSessionToken'])->name('auth.token');
 
 
         // 診斷路由 - 放在 auth.php 檔案的最後面，在最後的 }); 之前
