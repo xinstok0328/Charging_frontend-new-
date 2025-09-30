@@ -2,32 +2,161 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8">
-  <title>OpenStreetMap 地圖定位系統</title>
+  <title>充電站地圖定位系統</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <style>
-    html, body { height: 100%; margin: 0; }
-    body { overflow: hidden; }
+    html, body { height: 100%; margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    body { overflow: hidden; background-color: #f5f5f5; }
     #map { height: 80vh; }
     
-    /* 頁面頂部按鈕區域樣式 */
+    /* 動態訊息框樣式 */
+    .message-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1001;
+      padding: 12px 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      transform: translateY(-100%);
+      transition: transform 0.3s ease-in-out;
+      color: white;
+    }
+
+    .message-container.show {
+      transform: translateY(0);
+    }
+
+    .message-container.error {
+      background: linear-gradient(135deg, #ff7b7b 0%, #d63031 100%);
+    }
+
+    .message-container.success {
+      background: linear-gradient(135deg, #00b894 0%, #00a085 100%);
+    }
+
+    .message-content {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .message-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .message-title {
+      font-size: 16px;
+      font-weight: bold;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .message-status {
+      font-size: 12px;
+      opacity: 0.9;
+    }
+
+    .message-close-btn {
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .message-close-btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    .data-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .data-item {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 8px 10px;
+      border-radius: 6px;
+      backdrop-filter: blur(10px);
+    }
+
+    .data-label {
+      font-size: 11px;
+      opacity: 0.8;
+      margin-bottom: 2px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .data-value {
+      font-size: 14px;
+      font-weight: bold;
+    }
+
+    .currency-value {
+      color: #ffeaa7;
+    }
+
+    .datetime-value {
+      font-size: 12px;
+      font-family: 'Courier New', monospace;
+    }
+
+    .update-indicator {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      background-color: #00b894;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
+
+    /* 調整其他元素位置，為訊息框留空間 */
+    body.message-shown {
+      padding-top: 120px;
+    }
+    
+    /* 頁面頂部按鈕區域樣式 - 調整 z-index */
     .header-controls {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 10px 0;
-      margin-bottom: 20px;
-      border-bottom: 2px solid #e5e5e5;
+      padding: 15px 20px;
+      margin-bottom: 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      position: relative;
+      z-index: 1000;
     }
     
     .header-left h2 {
       margin: 0;
-      color: #333;
+      color: white;
+      font-size: 1.5em;
     }
     
     .header-right {
       display: flex;
       gap: 10px;
+      flex-wrap: wrap;
     }
     
     .control-btn {
@@ -41,11 +170,12 @@
       display: inline-flex;
       align-items: center;
       gap: 5px;
+      font-weight: 600;
     }
     
     .control-btn:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     }
     
     .btn-user-info {
@@ -77,7 +207,6 @@
       background-color: #e0a800;
     }
     
-    /* 新增註冊按鈕樣式 */
     .btn-register {
       background-color: #28a745;
       color: white;
@@ -96,6 +225,125 @@
     .btn-logout:hover {
       background-color: #c82333;
     }
+
+    /* 新增費率控制按鈕 */
+    .btn-rate-info {
+      background-color: #6f42c1;
+      color: white;
+    }
+    
+    .btn-rate-info:hover {
+      background-color: #5a2a87;
+    }
+
+    /* 充電站控制區域 */
+    .station-controls {
+      background: #f8f9fa;
+      padding: 15px 20px;
+      border-bottom: 1px solid #dee2e6;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      align-items: center;
+    }
+    
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      min-width: 150px;
+    }
+    
+    .form-group label {
+      font-weight: 600;
+      margin-bottom: 5px;
+      color: #495057;
+      font-size: 14px;
+    }
+    
+    .form-group input {
+      padding: 8px 12px;
+      border: 1px solid #ced4da;
+      border-radius: 5px;
+      font-size: 14px;
+      transition: border-color 0.3s;
+    }
+    
+    .form-group input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+    }
+    
+    .button-group {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+      flex-wrap: wrap;
+    }
+    
+    .station-btn {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .station-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+    
+    .station-btn.secondary {
+      background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+    }
+    
+    /* 狀態列 */
+    .status-bar {
+      padding: 10px 20px;
+      background: #e9ecef;
+      font-size: 14px;
+      color: #6c757d;
+      border-top: 1px solid #dee2e6;
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+    
+    .status-item {
+      margin-right: 20px;
+    }
+    
+    /* 載入和錯誤提示 */
+    .loading {
+      display: none;
+      text-align: center;
+      padding: 20px;
+      color: #667eea;
+      background: #f8f9fa;
+      border-bottom: 1px solid #dee2e6;
+    }
+    
+    .loading.show {
+      display: block;
+    }
+    
+    .error-message {
+      background: #f8d7da;
+      color: #721c24;
+      padding: 10px 20px;
+      border-left: 4px solid #dc3545;
+      margin: 0;
+      display: none;
+    }
+    
+    .error-message.show {
+      display: block;
+    }
     
     /* Modal 樣式 */
     .modal {
@@ -111,13 +359,15 @@
     
     .modal-content {
       background-color: #fefefe;
-      margin: 15% auto;
+      margin: 5% auto;
       padding: 20px;
       border: none;
       border-radius: 10px;
-      width: 80%;
+      width: 90%;
       max-width: 500px;
       box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      max-height: 90vh;
+      overflow-y: auto;
     }
     
     .modal-header {
@@ -147,17 +397,6 @@
     .close:hover,
     .close:focus {
       color: #000;
-    }
-    
-    .form-group {
-      margin-bottom: 15px;
-    }
-    
-    .form-group label {
-      display: block;
-      margin-bottom: 5px;
-      font-weight: bold;
-      color: #555;
     }
     
     .form-group input,
@@ -268,36 +507,216 @@
     .required {
       color: red;
     }
+
+    /* 標記彈出視窗樣式 */
+    .marker-popup {
+      min-width: 200px;
+    }
+    
+    .marker-popup h4 {
+      margin-top: 0;
+      color: #333;
+      border-bottom: 2px solid #667eea;
+      padding-bottom: 5px;
+    }
+    
+    .marker-popup p {
+      margin: 8px 0;
+      font-size: 14px;
+    }
+
+    /* 響應式設計 */
+    @media (max-width: 768px) {
+      .header-controls {
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
+      }
+      
+      .station-controls {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      .form-group {
+        min-width: unset;
+      }
+      
+      .button-group {
+        justify-content: center;
+      }
+      
+      #map {
+        height: 70vh;
+      }
+      
+      .status-bar {
+        flex-direction: column;
+        gap: 5px;
+      }
+      
+      .status-item {
+        margin-right: 0;
+      }
+
+      .data-grid {
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 8px;
+      }
+
+      .message-container {
+        padding: 8px 15px;
+      }
+
+      body.message-shown {
+        padding-top: 100px;
+      }
+    }
   </style>
 </head>
 <body>
+  <!-- 動態訊息框 -->
+  <div class="message-container" id="messageBox">
+    <div class="message-content">
+      <div class="message-header">
+        <h3 class="message-title">
+          充電費率資訊
+          <span class="update-indicator"></span>
+        </h3>
+        <div style="display: flex; align-items: center; gap: 15px;">
+          <span class="message-status" id="messageStatus">正在更新...</span>
+          <button class="message-close-btn" onclick="hideRateMessage()">隱藏</button>
+        </div>
+      </div>
+      
+      <div class="data-grid">
+        <div class="data-item">
+          <div class="data-label">費率名稱</div>
+          <div class="data-value" id="rateName">載入中...</div>
+        </div>
+        
+        <div class="data-item">
+          <div class="data-label">每度電價格</div>
+          <div class="data-value currency-value" id="pricePerKwh">載入中...</div>
+        </div>
+        
+        <div class="data-item">
+          <div class="data-label">時間費用/分鐘</div>
+          <div class="data-value currency-value" id="timeFeePerMin">載入中...</div>
+        </div>
+        
+        <div class="data-item">
+          <div class="data-label">服務費</div>
+          <div class="data-value currency-value" id="serviceFee">載入中...</div>
+        </div>
+        
+        <div class="data-item">
+          <div class="data-label">貨幣</div>
+          <div class="data-value" id="currency">載入中...</div>
+        </div>
+        
+        <div class="data-item">
+          <div class="data-label">生效時間</div>
+          <div class="data-value datetime-value" id="effectiveFrom">載入中...</div>
+        </div>
+        
+        <div class="data-item">
+          <div class="data-label">失效時間</div>
+          <div class="data-value datetime-value" id="effectiveTo">載入中...</div>
+        </div>
+        
+        <div class="data-item">
+          <div class="data-label">API 回應碼</div>
+          <div class="data-value" id="responseCode">載入中...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- 頁面頂部控制區域 -->
   <div class="header-controls">
     <div class="header-left">
-      <h2>地圖自動顯示目前位置</h2>
+      <h2>充電站地圖定位系統</h2>
     </div>
     <div class="header-right">
+      <button onclick="showRateInfo()" class="control-btn btn-rate-info">
+        費率資訊
+      </button>
       <button onclick="showUserInfo()" class="control-btn btn-user-info">
-        👤 查看用戶資料
+        用戶資料
       </button>
       <button onclick="showUpdateProfile()" class="control-btn btn-update-profile">
         ✏️ 更新資料
       </button>
       <button onclick="showChangePassword()" class="control-btn btn-change-password">
-        🔒 更改密碼
+        更改密碼
       </button>
-      <!-- 新增註冊按鈕 -->
       <button onclick="showRegister()" class="control-btn btn-register">
-        📝 註冊新用戶
+        註冊新用戶
       </button>
       <button onclick="logout()" class="control-btn btn-logout">
-        🚪 登出
+        登出
       </button>
     </div>
   </div>
 
+  <!-- 充電站控制區域 -->
+  <div class="station-controls">
+    <div class="form-group">
+      <label for="search-distance">搜尋範圍 (公里)</label>
+      <input type="number" id="search-distance" value="10" min="1" max="100" placeholder="預設10公里">
+    </div>
+    
+    <div class="form-group">
+      <label for="station-id">特定站點ID</label>
+      <input type="number" id="station-id" placeholder="可選">
+    </div>
+    
+    <!-- 新增費率查詢參數 -->
+    <!-- <div class="form-group">
+      <label for="user-id">用戶ID</label>
+      <input type="number" id="user-id" placeholder="用於費率查詢">
+    </div>
+    
+    <div class="form-group">
+      <label for="user-tier-id">用戶層級ID</label>
+      <input type="number" id="user-tier-id" placeholder="用於費率查詢">
+    </div>
+    
+    <div class="form-group">
+      <label for="pile-id">充電樁ID</label>
+      <input type="number" id="pile-id" placeholder="用於費率查詢">
+    </div> -->
+    
+    <div class="button-group">
+      <button onclick="loadNearbyStations()" class="station-btn">載入附近充電站</button>
+      <button onclick="loadAllStations()" class="station-btn secondary">載入所有充電站</button>
+      <!-- <button onclick="clearMarkers()" class="station-btn secondary">清除標記</button> -->
+    </div>
+  </div>
+
+  <!-- 錯誤訊息區域 -->
+  <div class="error-message" id="error-message"></div>
+  
+  <!-- 載入提示區域 -->
+  <div class="loading" id="loading">
+    <p>載入充電站資料中...</p>
+  </div>
+
   <!-- 地圖容器 -->
   <div id="map"></div>
+
+  <!-- 狀態列 -->
+  <div class="status-bar">
+    <div>
+      <span class="status-item" id="marker-count">標記數量: 0</span>
+      <span class="status-item" id="user-location">位置: 未取得</span>
+    </div>
+    <div>
+      <span class="status-item" id="last-update">最後更新: --</span>
+      <span class="status-item" id="rate-update">費率更新: --</span>
+    </div>
+  </div>
 
   <!-- 用戶資料 Modal -->
   <div id="userInfoModal" class="modal">
@@ -379,9 +798,9 @@
         <div id="registerAlert"></div>
         
         <div class="form-group">
-          <label for="regAccount">帳號（建議用 Email）:</label>
+          <label for="regAccount">帳號(建議用 Email):</label>
           <input type="text" id="regAccount" name="account" placeholder="請輸入帳號">
-          <small style="color: #666; font-size: 12px;">目前後端未使用此欄位，若要作為登入帳號可再調整。</small>
+          <small style="color: #666; font-size: 12px;">目前後端未使用此欄位,若要作為登入帳號可再調整。</small>
         </div>
 
         <div class="form-group">
@@ -400,11 +819,10 @@
           </div>
         </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label for="regEmail">Email <span class="required">*</span>:</label>
-            <input type="email" id="regEmail" name="email" required placeholder="請輸入電子郵件">
-          </div>
+        <div class="form-group">
+          <label for="regEmail">Email <span class="required">*</span>:</label>
+          <input type="email" id="regEmail" name="email" required placeholder="請輸入電子郵件">
+        </div>
 
         <div class="form-row">
           <div class="form-group">
@@ -424,10 +842,16 @@
 
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
-    // 全域變數
+    // ✅ 全域變數 - 添加預設座標
     let map;
     let csrfToken = '';
     let userLocationMarker = null;
+    let markersGroup;
+    let rateUpdateInterval;
+
+    // ✅ 新增：預設座標（台中市中心）
+    const DEFAULT_LAT = 24.1477;
+    const DEFAULT_LNG = 120.6736;
 
     // 初始化 CSRF Token
     function initializeCSRFToken() {
@@ -439,61 +863,395 @@
       }
     }
 
+    // 調整地圖容器大小
     function resizeMapContainer() {
       const header = document.querySelector('.header-controls');
+      const stationControls = document.querySelector('.station-controls');
+      const statusBar = document.querySelector('.status-bar');
+      const messageBox = document.querySelector('.message-container');
       const headerHeight = header ? header.offsetHeight : 0;
+      const controlsHeight = stationControls ? stationControls.offsetHeight : 0;
+      const statusHeight = statusBar ? statusBar.offsetHeight : 0;
+      const messageHeight = messageBox && messageBox.classList.contains('show') ? messageBox.offsetHeight : 0;
       const mapEl = document.getElementById('map');
+      
       if (mapEl) {
-        mapEl.style.height = Math.max(200, window.innerHeight - headerHeight) + 'px';
+        mapEl.style.height = Math.max(300, window.innerHeight - headerHeight - controlsHeight - statusHeight - messageHeight) + 'px';
       }
+      
       if (typeof map !== 'undefined' && map) {
         setTimeout(() => map.invalidateSize(), 0);
       }
     }
+
+    // 顯示錯誤訊息
+    function showError(message) {
+      const errorEl = document.getElementById('error-message');
+      errorEl.textContent = message;
+      errorEl.classList.add('show');
+      setTimeout(() => errorEl.classList.remove('show'), 5000);
+    }
+
+    // 顯示載入狀態
+    function showLoading(show = true) {
+      const loadingEl = document.getElementById('loading');
+      if (show) {
+        loadingEl.classList.add('show');
+      } else {
+        loadingEl.classList.remove('show');
+      }
+    }
+
+    // 更新狀態列
+    function updateStatus(markerCount, userLocation = null) {
+      document.getElementById('marker-count').textContent = `標記數量: ${markerCount}`;
+      if (userLocation) {
+        document.getElementById('user-location').textContent = 
+          `位置: ${userLocation.lat.toFixed(4)}, ${userLocation.lng.toFixed(4)}`;
+      }
+      document.getElementById('last-update').textContent = 
+        `最後更新: ${new Date().toLocaleTimeString()}`;
+    }
+
+    // 清除所有標記
+    function clearMarkers() {
+      if (markersGroup) {
+        markersGroup.clearLayers();
+      }
+      if (userLocationMarker) {
+        map.removeLayer(userLocationMarker);
+        userLocationMarker = null;
+      }
+      updateStatus(0);
+    }
+
+    // === 動態訊息框相關功能 ===
+    
+    // 顯示費率訊息框
+    function showRateInfo() {
+      const messageBox = document.getElementById('messageBox');
+      messageBox.classList.add('show');
+      document.body.classList.add('message-shown');
+      resizeMapContainer();
+      loadRateData();
+      startRateAutoUpdate();
+    }
+
+    // 隱藏費率訊息框
+    function hideRateMessage() {
+      const messageBox = document.getElementById('messageBox');
+      messageBox.classList.remove('show');
+      document.body.classList.remove('message-shown');
+      resizeMapContainer();
+      stopRateAutoUpdate();
+    }
+
+    // 更新費率訊息框內容
+    function updateRateMessageContent(apiResponse) {
+      const messageBox = document.getElementById('messageBox');
+      const messageStatus = document.getElementById('messageStatus');
+      
+      if (apiResponse.success) {
+        messageBox.className = 'message-container show success';
+        messageStatus.textContent = `最後更新: ${new Date().toLocaleTimeString()}`;
+        
+        document.getElementById('rateName').textContent = apiResponse.data.name || 'N/A';
+        document.getElementById('pricePerKwh').textContent = `${apiResponse.data.price_per_kwh || 0} ${apiResponse.data.currency || 'TWD'}`;
+        document.getElementById('timeFeePerMin').textContent = `${apiResponse.data.time_fee_per_min || 0} ${apiResponse.data.currency || 'TWD'}`;
+        document.getElementById('serviceFee').textContent = `${apiResponse.data.service_fee || 0} ${apiResponse.data.currency || 'TWD'}`;
+        document.getElementById('currency').textContent = apiResponse.data.currency || 'TWD';
+        document.getElementById('effectiveFrom').textContent = formatDateTime(apiResponse.data.effective_from);
+        document.getElementById('effectiveTo').textContent = formatDateTime(apiResponse.data.effective_to);
+        document.getElementById('responseCode').textContent = apiResponse.code;
+      } else {
+        messageBox.className = 'message-container show error';
+        messageStatus.textContent = `錯誤 - ${new Date().toLocaleTimeString()}`;
+        
+        document.getElementById('rateName').textContent = '無法載入';
+        document.getElementById('pricePerKwh').textContent = '---';
+        document.getElementById('timeFeePerMin').textContent = '---';
+        document.getElementById('serviceFee').textContent = '---';
+        document.getElementById('currency').textContent = '---';
+        document.getElementById('effectiveFrom').textContent = '---';
+        document.getElementById('effectiveTo').textContent = '---';
+        document.getElementById('responseCode').textContent = apiResponse.code || 'ERROR';
+      }
+
+      document.getElementById('rate-update').textContent = `費率更新: ${new Date().toLocaleTimeString()}`;
+    }
+
+    // 格式化日期時間
+    function formatDateTime(dateString) {
+      if (!dateString) return 'N/A';
+      const date = new Date(dateString);
+      return date.toLocaleString('zh-TW', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+    }
+
+    // 載入費率資料
+    // 載入費率資料 - 適配新的後端 API (只需要 pileId)
+async function loadRateData() {
+  try {
+    // ✅ 只獲取 pileId，移除 user_id 和 user_tier_id
+    const getPileId = () => {
+      const element = document.getElementById('pile-id');
+      if (!element) {
+        console.warn('元素 #pile-id 不存在，使用預設值 6');
+        return 6;
+      }
+      const value = element.value ? parseInt(element.value) : 6;
+      return isNaN(value) ? 6 : value;
+    };
+
+    const pileId = getPileId();
+
+    console.log('費率查詢參數:', { pileId });
+
+    // ✅ 使用駝峰式命名 pileId（而非 pile_id）
+    const params = new URLSearchParams({
+      pileId: pileId
+    });
+
+    const response = await fetch(`/user/purchase/tariff?${params.toString()}`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'X-CSRF-TOKEN': csrfToken,
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`HTTP ${response.status}: ${errorText}`);
+    }
+
+    const apiResponse = await response.json();
+    console.log('費率API回應:', apiResponse);
+    
+    // 檢查後端返回的資料格式
+    if (apiResponse.success && apiResponse.data) {
+      updateRateMessageContent(apiResponse);
+    } else {
+      throw new Error(apiResponse.message || '費率資料格式錯誤');
+    }
+
+  } catch (error) {
+    console.error('載入費率資料失敗:', error);
+    updateRateMessageContent({
+      success: false,
+      code: 'ERROR',
+      message: error.message
+    });
+  }
+}
+
+    // 開始自動更新費率
+    function startRateAutoUpdate() {
+      if (rateUpdateInterval) {
+        clearInterval(rateUpdateInterval);
+      }
+      rateUpdateInterval = setInterval(loadRateData, 30000);
+    }
+
+    // 停止自動更新費率
+    function stopRateAutoUpdate() {
+      if (rateUpdateInterval) {
+        clearInterval(rateUpdateInterval);
+        rateUpdateInterval = null;
+      }
+    }
+
     // 初始化地圖
     function initializeMap() {
-      // 建立地圖實例
-      map = L.map('map').setView([23.5, 121], 7); // 預設台灣中心
+      map = L.map('map').setView([23.8, 121], 8);
 
-      // 添加圖磚層
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/">OSM</a> 貢獻者'
+        attribution: '&copy; <a href="https://www.openstreetmap.org/">OSM</a> 貢獻者',
+        maxZoom: 19
       }).addTo(map);
 
-      // 載入後端標記
+      markersGroup = L.layerGroup().addTo(map);
       loadMapMarkers();
-
-      // 自動定位
       getCurrentLocation();
     }
 
-    // 載入地圖標記
-    function loadMapMarkers() {
-      fetch('/map/markers')
-        .then(response => {
-          if (!response.ok) {
-            throw new Error('無法載入地圖標記');
-          }
-          return response.json();
+    // ✅ 修正：載入地圖標記
+    function loadMapMarkers(userLat = null, userLng = null, searchDistance = null, stationId = null) {
+      showLoading(true);
+      
+      // ✅ 如果沒有提供座標，使用預設座標（台中）
+      if (userLat === null || userLng === null) {
+        userLat = DEFAULT_LAT;
+        userLng = DEFAULT_LNG;
+        console.log('使用預設座標（台中）:', userLat, userLng);
+      }
+      
+      if (searchDistance === null) {
+        const distanceInput = document.getElementById('search-distance');
+        searchDistance = distanceInput ? distanceInput.value || 10 : 10;
+      }
+      
+      if (stationId === null) {
+        const stationIdInput = document.getElementById('station-id');
+        const inputValue = stationIdInput ? stationIdInput.value : '';
+        stationId = inputValue ? parseInt(inputValue) : null;
+      }
+      
+      // ✅ 確保始終添加 lat 和 lng 參數
+      const params = new URLSearchParams();
+      params.append('lat', parseFloat(userLat).toFixed(6));
+      params.append('lng', parseFloat(userLng).toFixed(6));
+      params.append('distance', parseFloat(searchDistance).toString());
+      
+      if (stationId !== null) {
+        params.append('stationId', parseInt(stationId).toString());
+      }
+      
+      const apiUrl = `/index?${params.toString()}`;
+      const fallbackUrl = `/map/markers?${params.toString()}`;
+      
+      clearMarkers();
+      
+      attemptFetch(apiUrl)
+        .catch(error => {
+          console.warn('主要API端點失敗，嘗試回退端點:', error.message);
+          return attemptFetch(fallbackUrl);
         })
-        .then(data => {
-          if (Array.isArray(data)) {
+        .then(apiResponse => {
+          showLoading(false);
+          
+          if (!apiResponse.success) {
+            throw new Error(apiResponse.message || '載入地圖標記失敗');
+          }
+          
+          const data = apiResponse.data;
+          
+          if (Array.isArray(data) && data.length > 0) {
             data.forEach(marker => {
-              L.marker([marker.lat, marker.lng])
-                .addTo(map)
-                .bindPopup(marker.name);
+              const mapMarker = L.marker([marker.lat, marker.lng], {
+                icon: L.icon({
+                  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',
+                  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                  iconSize: [25, 41],
+                  iconAnchor: [12, 41],
+                  popupAnchor: [1, -34],
+                  shadowSize: [41, 41]
+                })
+              });
+              
+              const popupContent = `
+                <div class="marker-popup">
+                  <h4>充電站: ${marker.location_address || '未知位置'}</h4>
+                  <p><strong>型號:</strong> ${marker.model || 'N/A'}</p>
+                  <p><strong>連接器類型:</strong> ${marker.connector_type || 'N/A'}</p>
+                  <p><strong>最大功率:</strong> ${marker.max_kw || 'N/A'} kW</p>
+                  <p><strong>韌體版本:</strong> ${marker.firmware_version || 'N/A'}</p>
+                  <p><strong>距離:</strong> ${marker.distance || 'N/A'} km</p>
+                </div>
+              `;
+              
+              mapMarker.bindPopup(popupContent);
+              markersGroup.addLayer(mapMarker);
             });
+            
+            console.log(`成功載入 ${data.length} 個地圖標記`);
+            updateStatus(data.length, {lat: userLat, lng: userLng});
+            
+            if (data.length > 0) {
+              const group = new L.featureGroup(markersGroup.getLayers());
+              map.fitBounds(group.getBounds().pad(0.1));
+            }
+          } else {
+            console.warn('沒有找到充電站資料');
+            updateStatus(0);
+            showError('附近沒有充電站或搜尋範圍內無資料');
           }
         })
         .catch(error => {
+          showLoading(false);
           console.error('載入地圖標記失敗:', error);
+          showError('載入地圖標記時發生錯誤: ' + error.message);
+          updateStatus(0);
         });
+    }
+
+    // 輔助函數：嘗試fetch請求
+    function attemptFetch(url) {
+      return fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': csrfToken,
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+      });
+    }
+
+    // ✅ 修正：載入附近充電站
+    function loadNearbyStations() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          function(position) {
+            const userLat = position.coords.latitude;
+            const userLng = position.coords.longitude;
+            
+            if (userLocationMarker) {
+              map.removeLayer(userLocationMarker);
+            }
+            
+            userLocationMarker = L.marker([userLat, userLng], {
+              icon: L.icon({
+                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
+                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                iconSize: [25, 41],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34],
+                shadowSize: [41, 41]
+              })
+            })
+            .addTo(map)
+            .bindPopup('您的位置')
+            .openPopup();
+            
+            loadMapMarkers(userLat, userLng);
+          },
+          function(error) {
+            console.error('無法取得位置:', error);
+            showError('無法取得您的位置，將使用預設位置（台中）');
+            // ✅ 使用預設座標
+            loadMapMarkers(DEFAULT_LAT, DEFAULT_LNG);
+          }
+        );
+      } else {
+        console.error('瀏覽器不支援地理位置');
+        showError('瀏覽器不支援地理位置，將使用預設位置（台中）');
+        // ✅ 使用預設座標
+        loadMapMarkers(DEFAULT_LAT, DEFAULT_LNG);
+      }
+    }
+
+    // ✅ 修正：載入所有充電站
+    function loadAllStations() {
+      loadMapMarkers(DEFAULT_LAT, DEFAULT_LNG);
     }
 
     // 獲取當前位置
     function getCurrentLocation() {
       if (!navigator.geolocation) {
-        alert('您的瀏覽器不支援地理定位功能');
+        console.warn('您的瀏覽器不支援地理定位功能');
         return;
       }
 
@@ -502,15 +1260,12 @@
           const lat = position.coords.latitude;
           const lng = position.coords.longitude;
 
-          // 移動地圖到當前位置
           map.setView([lat, lng], 16);
 
-          // 如果已經有位置標記，先移除
           if (userLocationMarker) {
             map.removeLayer(userLocationMarker);
           }
 
-          // 添加定位圓圈
           L.circle([lat, lng], {
             radius: 30,
             color: '#3f9bff',
@@ -519,7 +1274,6 @@
             weight: 1
           }).addTo(map);
 
-          // 添加用戶位置標記
           userLocationMarker = L.circleMarker([lat, lng], {
             radius: 8,
             color: '#136AEC',
@@ -544,7 +1298,7 @@
               errorMessage += '發生未知錯誤';
               break;
           }
-          alert(errorMessage);
+          console.warn(errorMessage);
         },
         {
           enableHighAccuracy: true,
@@ -659,10 +1413,8 @@
         const newPassword = document.getElementById('newPassword').value;
         const alertDiv = document.getElementById('passwordAlert');
         
-        // 清除之前的提示
         alertDiv.innerHTML = '';
         
-        // 驗證密碼
         if (newPassword.length < 6) {
           alertDiv.innerHTML = '<div class="alert alert-error">新密碼至少需要6個字元！</div>';
           return;
@@ -673,7 +1425,6 @@
           submitBtn.disabled = true;
           submitBtn.textContent = '更新中...';
 
-          // 檢查是否有 CSRF token
           if (!csrfToken) {
             alertDiv.innerHTML = '<div class="alert alert-error">安全驗證失敗，請重新整理頁面</div>';
             return;
@@ -832,16 +1583,13 @@
         const data = Object.fromEntries(formData.entries());
         const alertDiv = document.getElementById('registerAlert');
         
-        // 清除之前的提示
         alertDiv.innerHTML = '';
         
-        // 驗證必填欄位
         if (!data.name || !data.email || !data.password || !data.password_confirmation) {
           alertDiv.innerHTML = '<div class="alert alert-error">請填寫所有必填欄位！</div>';
           return;
         }
         
-        // 驗證密碼
         if (data.password !== data.password_confirmation) {
           alertDiv.innerHTML = '<div class="alert alert-error">密碼與確認密碼不符！</div>';
           return;
@@ -881,14 +1629,11 @@
             document.getElementById('registerForm').reset();
             setTimeout(() => {
               closeModal('registerModal');
-              // 可選擇跳轉到登入頁面或其他頁面
-              // window.location.href = '/login';
             }, 2000);
           } else {
             let errorMessage = '註冊失敗';
             
             if (response.status === 422 && responseData.errors) {
-              // Laravel 驗證錯誤
               const errors = Object.values(responseData.errors).flat();
               errorMessage = errors.join(', ');
             } else if (responseData.message) {
@@ -921,11 +1666,9 @@
             }
           });
 
-          // 無論 response 如何，都重定向到登入頁面
           window.location.href = '/login';
         } catch (error) {
           console.error('Logout error:', error);
-          // 即使發生錯誤也重定向到登入頁面
           window.location.href = '/login';
         }
       }

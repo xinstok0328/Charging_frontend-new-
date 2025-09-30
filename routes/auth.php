@@ -12,6 +12,7 @@ use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\Auth\ConfirmablePasswordController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\MapController;
+use App\Http\Controllers\TariffController; // 新增費率控制器
 // use App\Http\Controllers\UserController; // 如果需要的話取消註解
 
 // ------------ 未登入可訪問 ------------
@@ -38,8 +39,13 @@ Route::middleware('guest')->group(function () {
     Route::get('/', function () { return view('welcome'); });
 
     // 地圖相關路由
-    Route::get('/map', [MapController::class, 'index']);
-    Route::get('/map/markers', [MapController::class, 'markers']);
+    Route::get('/map', [MapController::class, 'index'])->name('map.index');
+    
+    // 原有的路由保持不變
+    Route::get('/map/markers', [MapController::class, 'markers'])->name('map.markers');
+    
+    // 新增 - 對齊前端代碼的API端點
+    Route::get('/index', [MapController::class, 'getStations'])->name('map.stations');
 
     // 驗證狀態檢查
     Route::get('/auth/status', [ExternalAuthController::class, 'checkAuthStatus'])->name('auth.status');
@@ -47,6 +53,15 @@ Route::middleware('guest')->group(function () {
     // 測試頁面
     Route::get('/test-auth', function () { return view('test-auth'); });
     Route::get('/test-login', function () { return view('test-login'); });
+
+    Route::get('/user/info', [ExternalAuthController::class, 'userInfo'])->name('user.info');
+
+    // === 新增費率查詢路由（暫時放在 guest 中間件，視需求可移到 auth） ===
+    Route::get('/user/purchase/tariff', [TariffController::class, 'getTariff'])->name('user.purchase.tariff');
+
+     Route::get('/test-route', function() {
+    return response()->json(['message' => '路由測試成功']);
+    });
 });
 
 // ------------ 已登入可訪問 ------------
@@ -66,8 +81,6 @@ Route::middleware('custom.auth')->group(function () {
     Route::put('/password', [PasswordController::class, 'update'])->name('password.update');
 
     // 用戶資訊 - 移除重複定義
-   
-
     
     Route::get('/info', function () { return view('info'); });
     
@@ -91,34 +104,39 @@ Route::middleware('custom.auth')->group(function () {
 	// 取得目前 Session 中的 token
 	Route::get('/auth/token', [ExternalAuthController::class, 'getSessionToken'])->name('auth.token');
 
+    // 如果你想要在登入後也能訪問地圖API（可選）
+    // Route::get('/map/stations', [MapController::class, 'getStations'])->name('map.stations.auth');
 
-        // 診斷路由 - 放在 auth.php 檔案的最後面，在最後的 }); 之前
-        Route::get('/debug/session', function() {
-            return response()->json([
-                'session_driver' => config('session.driver'),
-                'session_id' => Session::getId(),
-                'session_started' => Session::isStarted(),
-                'user_authenticated' => Session::get('user_authenticated'),
-                'has_auth_token' => !empty(Session::get('auth_token')),
-                'auth_token_length' => Session::get('auth_token') ? strlen(Session::get('auth_token')) : 0,
-                'user_data' => Session::get('user_data'),
-                'all_session_keys' => array_keys(Session::all()),
-                'session_file_path' => storage_path('framework/sessions'),
-                'session_lifetime' => config('session.lifetime'),
-            ]);
-        });
+    // === 認證用戶專用的費率管理路由（如果需要更多權限控制） ===
+    // Route::get('/user/purchase/tariff/detailed', [TariffController::class, 'getDetailedTariff'])->name('user.purchase.tariff.detailed');
+    // Route::post('/user/purchase/tariff/calculate', [TariffController::class, 'calculateCost'])->name('user.purchase.tariff.calculate');
 
-        Route::get('/debug/auth-status', function() {
-            return response()->json([
-                'authenticated' => Session::get('user_authenticated', false),
-                'has_token' => !empty(Session::get('auth_token')),
-                'user_account' => Session::get('user_account'),
-                'session_id' => Session::getId(),
-                'timestamp' => now()->toISOString()
-            ]);
-        });
+    // 診斷路由 - 放在 auth.php 檔案的最後面，在最後的 }); 之前
+    Route::get('/debug/session', function() {
+        return response()->json([
+            'session_driver' => config('session.driver'),
+            'session_id' => Session::getId(),
+            'session_started' => Session::isStarted(),
+            'user_authenticated' => Session::get('user_authenticated'),
+            'has_auth_token' => !empty(Session::get('auth_token')),
+            'auth_token_length' => Session::get('auth_token') ? strlen(Session::get('auth_token')) : 0,
+            'user_data' => Session::get('user_data'),
+            'all_session_keys' => array_keys(Session::all()),
+            'session_file_path' => storage_path('framework/sessions'),
+            'session_lifetime' => config('session.lifetime'),
+        ]);
+    });
 
+    Route::get('/debug/auth-status', function() {
+        return response()->json([
+            'authenticated' => Session::get('user_authenticated', false),
+            'has_token' => !empty(Session::get('auth_token')),
+            'user_account' => Session::get('user_account'),
+            'session_id' => Session::getId(),
+            'timestamp' => now()->toISOString()
+        ]);
+    });
 
+   
 
 });
-
