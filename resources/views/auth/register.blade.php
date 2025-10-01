@@ -35,6 +35,19 @@
             <x-input-error :messages="$errors->get('email')" class="mt-2" />
         </div>
 
+        {{-- ✅ 新增驗證碼欄位 --}}
+        <div class="mt-3 flex items-center gap-2">
+            <input id="verifyCode" type="text" name="verifyCode"
+                class="border rounded p-2 w-full"
+                placeholder="輸入收到的驗證碼">
+            <button id="getCodeBtn" type="button"
+                class="px-3 py-2 bg-blue-500 text-white rounded">
+                取得驗證碼
+            </button>
+        </div>
+        <div id="msg" class="mt-2 text-sm"></div>
+
+
         <div>
             <x-input-label for="phone" value="手機" />
             <x-text-input id="phone" name="phone" type="tel"
