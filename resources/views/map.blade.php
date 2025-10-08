@@ -489,6 +489,38 @@
       border: 1px solid #c3e6cb;
     }
     
+    /* Success Modal Styles */
+    .success-modal-backdrop {
+      backdrop-filter: blur(2px);
+      transition: opacity 0.3s ease;
+    }
+    
+    .success-modal {
+      animation: successModalSlideIn 0.3s ease-out;
+      transition: all 0.3s ease;
+    }
+    
+    @keyframes successModalSlideIn {
+      from {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.8);
+      }
+      to {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+    }
+    
+    #success-close:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 184, 148, 0.3);
+    }
+    
+    #success-close:active {
+      transform: translateY(0);
+    }
+    }
+    
     .alert-error {
       background-color: #f8d7da;
       color: #721c24;
@@ -651,8 +683,8 @@
       <button onclick="showChangePassword()" class="control-btn btn-change-password">
         更改密碼
       </button>
-      <button onclick="showRegister()" class="control-btn btn-register">
-        註冊新用戶
+      <button onclick="openMyReservations()" class="control-btn btn-register">
+        查看我的預約
       </button>
       <button onclick="logout()" class="control-btn btn-logout">
         登出
@@ -705,6 +737,59 @@
 
   <!-- 地圖容器 -->
   <div id="map"></div>
+
+  <!-- Reservation Modal -->
+  <div id="reservation-backdrop" class="reservation-modal-backdrop" style="position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: none; z-index: 1002;"></div>
+  <div id="reservation-modal" class="reservation-modal" role="dialog" aria-modal="true" style="position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); background: #fff; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); width: 420px; max-width: calc(100% - 32px); display: none; z-index: 1003;">
+    <header style="padding:14px 16px;border-bottom:1px solid #eee;font-weight:bold;">我要預約</header>
+    <div class="body" style="padding:16px;">
+      <div class="row" style="display:grid;grid-template-columns:100px 1fr;gap:8px;align-items:center;margin-bottom:10px;"><div>站點</div><div id="resv-address">-</div></div>
+      <div class="row" style="display:grid;grid-template-columns:100px 1fr;gap:8px;align-items:center;margin-bottom:10px;"><div>型號</div><div id="resv-model">-</div></div>
+      <div class="row" style="display:grid;grid-template-columns:100px 1fr;gap:8px;align-items:center;margin-bottom:10px;"><div>接頭</div><div id="resv-connector">-</div></div>
+      <div class="row" style="display:grid;grid-template-columns:100px 1fr;gap:8px;align-items:center;margin-bottom:10px;"><div>最大功率</div><div id="resv-maxkw">-</div></div>
+      <input type="hidden" id="resv-pile-id" />
+      <div class="row" style="display:grid;grid-template-columns:100px 1fr;gap:8px;align-items:center;margin-bottom:10px;">
+        <div>開始</div>
+        <div><input type="datetime-local" id="resv-start" step="1800"></div>
+      </div>
+      <div class="row" style="display:grid;grid-template-columns:100px 1fr;gap:8px;align-items:center;margin-bottom:10px;">
+        <div>結束</div>
+        <div><input type="datetime-local" id="resv-end" step="1800"></div>
+      </div>
+      <div id="resv-error" style="color:#d63031;font-size:12px;min-height:16px;"></div>
+    </div>
+    <div class="actions" style="display:flex;justify-content:flex-end;gap:10px;padding:12px 16px;border-top:1px solid #eee;">
+      <button id="resv-cancel" class="btn btn-secondary" style="padding:8px 12px;border-radius:6px;border:none;cursor:pointer;background:#e0e0e0;">取消</button>
+      <button id="resv-submit" class="btn btn-primary" style="padding:8px 12px;border-radius:6px;border:none;cursor:pointer;background:#2b7a0b;color:#fff;">確認預約</button>
+    </div>
+  </div>
+
+  <!-- Success Modal -->
+  <div id="success-backdrop" class="success-modal-backdrop" style="position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: none; z-index: 1004;"></div>
+  <div id="success-modal" class="success-modal" role="dialog" aria-modal="true" style="position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); background: #fff; border-radius: 12px; box-shadow: 0 15px 35px rgba(0,0,0,0.2); width: 380px; max-width: calc(100% - 32px); display: none; z-index: 1005;">
+    <div style="padding: 24px; text-align: center;">
+      <div style="width: 60px; height: 60px; margin: 0 auto 16px; background: linear-gradient(135deg, #00b894 0%, #00a085 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <h3 style="margin: 0 0 8px; font-size: 20px; font-weight: 600; color: #2d3748;">預約成功！</h3>
+      <p id="success-message" style="margin: 0 0 20px; color: #718096; font-size: 14px; line-height: 1.5;">您的充電站預約已成功建立</p>
+      <button id="success-close" style="background: linear-gradient(135deg, #00b894 0%, #00a085 100%); color: white; border: none; padding: 10px 24px; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s ease;">確定</button>
+    </div>
+  </div>
+
+  <!-- My Reservations Modal -->
+  <div id="myresv-backdrop" class="reservation-modal-backdrop" style="position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: none; z-index: 1002;"></div>
+  <div id="myresv-modal" class="reservation-modal" role="dialog" aria-modal="true" style="position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); background: #fff; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); width: 520px; max-width: calc(100% - 32px); display: none; z-index: 1003;">
+    <header style="padding:14px 16px;border-bottom:1px solid #eee;font-weight:bold;display:flex;justify-content:space-between;align-items:center;">我的預約
+      <button id="myresv-close" class="btn btn-secondary" style="padding:4px 8px;border:none;border-radius:6px;">關閉</button>
+    </header>
+    <div class="body" style="padding:16px;">
+      <div id="myresv-list" style="display:flex;flex-direction:column;gap:10px;"></div>
+      <div id="myresv-error" style="color:#d63031;font-size:12px;min-height:16px;margin-top:8px;"></div>
+    </div>
+  </div>
 
   <!-- 狀態列 -->
   <div class="status-bar">
@@ -890,6 +975,29 @@
       errorEl.textContent = message;
       errorEl.classList.add('show');
       setTimeout(() => errorEl.classList.remove('show'), 5000);
+    }
+
+    // 顯示成功彈窗
+    function showSuccess(message) {
+      const successMessageEl = document.getElementById('success-message');
+      if (successMessageEl) {
+        successMessageEl.textContent = message || '操作成功！';
+      }
+      
+      // 顯示成功彈窗
+      document.getElementById('success-backdrop').style.display = 'block';
+      document.getElementById('success-modal').style.display = 'block';
+      
+      // 自動關閉彈窗（可選）
+      setTimeout(() => {
+        hideSuccessModal();
+      }, 3000);
+    }
+
+    // 隱藏成功彈窗
+    function hideSuccessModal() {
+      document.getElementById('success-backdrop').style.display = 'none';
+      document.getElementById('success-modal').style.display = 'none';
     }
 
     // 顯示載入狀態
@@ -1154,6 +1262,18 @@ async function loadRateData() {
                   <p><strong>最大功率:</strong> ${marker.max_kw || 'N/A'} kW</p>
                   <p><strong>韌體版本:</strong> ${marker.firmware_version || 'N/A'}</p>
                   <p><strong>距離:</strong> ${marker.distance || 'N/A'} km</p>
+                  <div style="margin-top:8px;">
+                    <button
+                      class="reserve-btn"
+                      data-pile-id="${marker.id}"
+                      data-address="${marker.location_address || ''}"
+                      data-model="${marker.model || ''}"
+                      data-connector="${marker.connector_type || ''}"
+                      data-maxkw="${marker.max_kw || ''}"
+                      data-firmware="${marker.firmware_version || ''}"
+                      style="background:#2b7a0b;color:#fff;border:none;padding:8px 12px;border-radius:6px;cursor:pointer;"
+                    >我要預約</button>
+                  </div>
                 </div>
               `;
               
@@ -1707,6 +1827,357 @@ async function loadRateData() {
 
     // 視窗大小改變時重新調整地圖容器高度
     window.addEventListener('resize', resizeMapContainer);
+
+    // ========== Reservation modal logic ==========
+    // Helpers for concurrency and parsing
+    let requestLock = false;
+    async function withLock(fn) {
+      if (requestLock) { return; }
+      requestLock = true;
+      try { await fn(); } finally { requestLock = false; }
+    }
+
+    async function safeJsonResponse(resp) {
+      const ct = resp.headers.get('content-type') || '';
+      if (resp.status === 204 || !ct.includes('application/json')) {
+        try { return JSON.parse(await resp.text()); } catch (_) { return null; }
+      }
+      try { return await resp.json(); } catch (_) { return null; }
+    }
+
+    function uuidv4() {
+      if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+      return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    }
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+    // (Toast helpers removed per request)
+    document.addEventListener('click', function(e) {
+      const btn = e.target.closest('.reserve-btn');
+      if (btn) {
+        const pileId = btn.getAttribute('data-pile-id');
+        document.getElementById('resv-pile-id').value = pileId;
+        document.getElementById('resv-address').textContent = btn.getAttribute('data-address') || '-';
+        document.getElementById('resv-model').textContent = btn.getAttribute('data-model') || '-';
+        document.getElementById('resv-connector').textContent = btn.getAttribute('data-connector') || '-';
+        document.getElementById('resv-maxkw').textContent = btn.getAttribute('data-maxkw') ? (btn.getAttribute('data-maxkw') + ' kW') : '-';
+
+        // Default start/end: next aligned 15-min slot for 1 hour
+        const step = 15; // minutes
+        const nowDt = new Date();
+        const addMinutes = (d, m) => new Date(d.getTime() + m*60000);
+        const ceilToStep = (d) => {
+          const aligned = new Date(d);
+          aligned.setSeconds(0,0);
+          const minutes = aligned.getMinutes();
+          const remainder = minutes % step;
+          if (remainder !== 0) aligned.setMinutes(minutes + (step - remainder));
+          return aligned;
+        };
+        const start = ceilToStep(addMinutes(nowDt, 15));
+        const end = addMinutes(start, 60);
+        const toLocalInput = (d) => {
+          const pad = (n) => String(n).padStart(2,'0');
+          return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        };
+        document.getElementById('resv-start').value = toLocalInput(start);
+        document.getElementById('resv-end').value = toLocalInput(end);
+        document.getElementById('resv-error').textContent = '';
+
+        document.getElementById('reservation-backdrop').style.display = 'block';
+        document.getElementById('reservation-modal').style.display = 'block';
+      }
+    });
+
+    document.getElementById('resv-cancel').addEventListener('click', () => {
+      document.getElementById('reservation-backdrop').style.display = 'none';
+      document.getElementById('reservation-modal').style.display = 'none';
+    });
+    document.getElementById('reservation-backdrop').addEventListener('click', () => {
+      document.getElementById('reservation-backdrop').style.display = 'none';
+      document.getElementById('reservation-modal').style.display = 'none';
+    });
+
+    // Success Modal Event Listeners
+    document.getElementById('success-close').addEventListener('click', () => {
+      hideSuccessModal();
+    });
+    document.getElementById('success-backdrop').addEventListener('click', () => {
+      hideSuccessModal();
+    });
+
+    document.getElementById('resv-submit').addEventListener('click', async () => withLock(async () => {
+      const pileId = parseInt(document.getElementById('resv-pile-id').value || '0');
+      const startStr = document.getElementById('resv-start').value;
+      const endStr = document.getElementById('resv-end').value;
+      const errEl = document.getElementById('resv-error');
+      errEl.textContent = '';
+
+      if (!pileId || !startStr || !endStr) {
+        errEl.textContent = '請完整填寫';
+        return;
+      }
+
+      // Convert local datetime to ISO with Z
+      const toIsoZ = (local) => {
+        const d = new Date(local);
+        return new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().replace(/\.\d{3}Z$/, 'Z');
+      };
+
+      // Try to get Bearer token from session helper endpoint
+      let authHeader = {};
+      try {
+        const tokResp = await fetch('/auth/token', { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        if (tokResp.ok) {
+          const tokJson = await tokResp.json();
+          if (tokJson?.success && tokJson?.token) {
+            authHeader['Authorization'] = 'Bearer ' + tokJson.token;
+          }
+        }
+      } catch (_) { /* ignore */ }
+
+      // Local pre-checks per minimal rules
+      const toDate = (s) => new Date(s);
+      const sd = toDate(startStr);
+      const ed = toDate(endStr);
+      if (!(sd instanceof Date) || isNaN(sd) || !(ed instanceof Date) || isNaN(ed)) {
+        errEl.textContent = 'INVALID_DATETIME';
+        return;
+      }
+      if (ed <= sd) {
+        errEl.textContent = 'END_BEFORE_START';
+        return;
+      }
+      const minutesBetween = Math.round((ed - sd) / 60000);
+      if (minutesBetween < 30 || minutesBetween > 240) {
+        errEl.textContent = 'DURATION_OUT_OF_RANGE';
+        return;
+      }
+
+      const submitBtn = document.getElementById('resv-submit');
+      submitBtn.disabled = true;
+      try {
+        // Guard: ensure no active reservation (use /reservations/top)
+        try {
+          const chk = await fetch('/reservations/top', { method: 'GET', headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'include' });
+          const chkJson = await safeJsonResponse(chk);
+          if (chk.ok && chkJson && chkJson.success && chkJson.data && chkJson.data.status && chkJson.data.status !== 'CANCELLED' && chkJson.data.status !== 'CANCELED') {
+            errEl.textContent = '你目前已有生效預約，請先取消或更改時段';
+            submitBtn.disabled = false;
+            return;
+          }
+        } catch (_) { /* ignore */ }
+
+        const resp = await fetch('/reservations', {
+          method: 'POST',
+          headers: Object.assign({
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': csrfToken,
+            'X-Requested-With': 'XMLHttpRequest',
+            'Idempotency-Key': uuidv4()
+          }, authHeader),
+          credentials: 'include',
+          body: JSON.stringify({
+            pile_id: pileId,
+            start_time: toIsoZ(startStr),
+            end_time: toIsoZ(endStr)
+          })
+        });
+        let json = await safeJsonResponse(resp) || {};
+        if (!resp.ok || json.success === false) {
+          let msg = json.message || `預約失敗 (HTTP ${resp.status})`;
+          // Map backend codes to UI
+          if (json?.data?.error_code === 'OVERLAPPED_WITH_OTHERS') msg = '你選擇的時段已被預約';
+          if (resp.status === 401) msg = '請先登入再預約';
+          if (json?.data?.error_code === 'USER_ACTIVE') msg = '你已有一筆尚未結束的預約';
+          if (resp.status === 409 && !json?.data?.error_code) msg = '該時段不可用或與其他預約衝突';
+          errEl.textContent = msg;
+          return;
+        }
+        // success
+        // 提示：預約成功
+        if (typeof showSuccess === 'function') {
+          showSuccess('預約成功');
+        }
+        document.getElementById('reservation-backdrop').style.display = 'none';
+        document.getElementById('reservation-modal').style.display = 'none';
+      } catch (e) {
+        errEl.textContent = '連線失敗，請稍後再試';
+      } finally {
+        submitBtn.disabled = false;
+      }
+    }));
+    // ========== end Reservation modal logic ==========
+
+    // ========== My Reservations (view & cancel) ==========
+    let myResvPollTimer = null;
+    function stopMyResvPolling() {
+      if (myResvPollTimer) {
+        clearInterval(myResvPollTimer);
+        myResvPollTimer = null;
+      }
+    }
+
+    let lastMyResvKey = null;
+    function keyOfResv(d) {
+      const addr = (d.location_address || (d.pile_response && d.pile_response.location_address) || '');
+      const lat = (typeof d.lat === 'number') ? d.lat : (d.pile_response && typeof d.pile_response.lat === 'number' ? d.pile_response.lat : '');
+      const lng = (typeof d.lng === 'number') ? d.lng : (d.pile_response && typeof d.pile_response.lng === 'number' ? d.pile_response.lng : '');
+      return [d.id, d.start_time, d.end_time, d.status, addr, lat, lng].join('|');
+    }
+
+    function renderMyReservation(data, listEl) {
+      listEl.innerHTML = '';
+      const item = document.createElement('div');
+      item.style.border = '1px solid #eee';
+      item.style.borderRadius = '8px';
+      item.style.padding = '10px';
+      const addr = (data.location_address || (data.pile_response && data.pile_response.location_address) || '');
+      const lat = (typeof data.lat === 'number') ? data.lat : (data.pile_response && typeof data.pile_response.lat === 'number' ? data.pile_response.lat : null);
+      const lng = (typeof data.lng === 'number') ? data.lng : (data.pile_response && typeof data.pile_response.lng === 'number' ? data.pile_response.lng : null);
+      const gmap = (lat !== null && lng !== null)
+        ? `https://www.google.com/maps?q=${lat},${lng}`
+        : (addr ? `https://www.google.com/maps?q=${encodeURIComponent(addr)}` : '');
+
+      item.innerHTML = `
+        <div>開始：${(data.start_time || '').replace('T',' ')}</div>
+        <div>結束：${(data.end_time || '').replace('T',' ')}</div>
+        <div>地點：${addr || '-'}
+          ${gmap ? `<a href="${gmap}" target="_blank" rel="noopener" title="在 Google Maps 開啟" style="margin-left:6px; display:inline-flex; align-items:center;">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="#2563eb" aria-hidden="true">
+              <path d="M12 2C8.686 2 6 4.686 6 8c0 5.25 6 12 6 12s6-6.75 6-12c0-3.314-2.686-6-6-6zm0 8.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/>
+            </svg>
+          </a>` : ''}
+        </div>
+        <div>狀態：<span id="myresv-status">${data.status || ''}</span></div>
+        <div style="margin-top:8px;display:flex;gap:8px;">
+          <button id="btnCancelResv" class="btn btn-secondary">取消預約</button>
+        </div>
+      `;
+      listEl.appendChild(item);
+      // 記錄目前顯示內容的 key，用於輪詢差異比對
+      lastMyResvKey = keyOfResv(data);
+
+      return item;
+    }
+
+    async function openMyReservations() {
+      const listEl = document.getElementById('myresv-list');
+      const errEl = document.getElementById('myresv-error');
+      listEl.innerHTML = '';
+      errEl.textContent = '';
+
+      // Fetch token
+      let tokenJson = null;
+      try {
+        const t = await fetch('/auth/token', { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        if (t.ok) tokenJson = await t.json();
+      } catch (_) {}
+      if (!tokenJson || !tokenJson.success || !tokenJson.token) {
+        errEl.textContent = '請先登入';
+      } else {
+        try {
+          const resp = await fetch('/reservations/top', {
+            method: 'GET',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+          });
+          const json = await resp.json();
+          if (resp.ok && json && json.success && json.data) {
+            const data = json.data || {};
+            if (!data.start_time && !data.end_time) {
+              errEl.textContent = '目前沒有預約';
+            } else {
+              const item = renderMyReservation(data, listEl);
+
+              const cancelBtn = item.querySelector('#btnCancelResv');
+              cancelBtn.addEventListener('click', async () => {
+                errEl.textContent = '';
+                try {
+                  // Attach Bearer token if available
+                  let authHeader = {};
+                  try {
+                    const tok = await fetch('/auth/token', { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                    if (tok.ok) {
+                      const tj = await tok.json();
+                      if (tj?.success && tj?.token) {
+                        authHeader['Authorization'] = 'Bearer ' + tj.token;
+                      }
+                    }
+                  } catch (_) {}
+                  const r = await fetch('/reservations/cancel', {
+                    method: 'DELETE',
+                    headers: {
+                      'X-Requested-With': 'XMLHttpRequest',
+                      'X-CSRF-TOKEN': csrfToken,
+                      ...authHeader
+                    },
+                    credentials: 'include'
+                  });
+                  const j = await safeJsonResponse(r);
+                  if (j && j.success) {
+                    // 後端回傳 { success:true, code, message, data }，即使 data 為 null 也不會拋錯
+                    showSuccess && showSuccess('取消成功');
+                    const safeData = j?.data ?? {};
+                    if (safeData.id) {
+                      console.log('ID:', safeData.id);
+                    }
+                    // 關閉「我的預約」模態框
+                    document.getElementById('myresv-backdrop').style.display = 'none';
+                    document.getElementById('myresv-modal').style.display = 'none';
+                    stopMyResvPolling();
+                  } else if (r.ok && !j) {
+                    // 例如 204 No Content 或非 JSON
+                    showSuccess && showSuccess('取消成功');
+                    // 關閉「我的預約」模態框
+                    document.getElementById('myresv-backdrop').style.display = 'none';
+                    document.getElementById('myresv-modal').style.display = 'none';
+                    stopMyResvPolling();
+                  } else {
+                    errEl.textContent = (j && j.message) ? j.message : `取消失敗（HTTP ${r.status}）`;
+                  }
+                } catch (e) {
+                  console.error(e);
+                  errEl.textContent = '連線失敗';
+                }
+              });
+
+              // Start polling latest status every 5s while modal is open
+              stopMyResvPolling();
+              myResvPollTimer = setInterval(async () => {
+                try {
+                  const r = await fetch('/reservations/top', { method: 'GET', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                  const j = await r.json();
+                  if (r.ok && j && j.success && j.data) {
+                    const latest = j.data;
+                    const k = keyOfResv(latest);
+                    if (k !== lastMyResvKey) {
+                      renderMyReservation(latest, listEl);
+                    }
+                  }
+                } catch (_) {}
+              }, 5000);
+            }
+          } else {
+            errEl.textContent = (json && json.message) ? json.message : '目前沒有預約';
+          }
+        } catch (e) {
+          errEl.textContent = '讀取失敗';
+        }
+      }
+
+      document.getElementById('myresv-backdrop').style.display = 'block';
+      document.getElementById('myresv-modal').style.display = 'block';
+    }
+    document.getElementById('myresv-close').addEventListener('click', () => {
+      document.getElementById('myresv-backdrop').style.display = 'none';
+      document.getElementById('myresv-modal').style.display = 'none';
+      stopMyResvPolling();
+    });
+    document.getElementById('myresv-backdrop').addEventListener('click', () => {
+      document.getElementById('myresv-backdrop').style.display = 'none';
+      document.getElementById('myresv-modal').style.display = 'none';
+      stopMyResvPolling();
+    });
   </script>
 </body>
 </html>

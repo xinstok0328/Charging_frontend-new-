@@ -1,6 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ReservationController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -10,9 +12,10 @@ Route::get('/dashboard', function () {
     return view('dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
-// 其餘 Breeze 預設
+// 需要登入才可用的路由
 Route::middleware('auth')->group(function () {
-    // ... 你的 profile 等路由（保留原本）
+    Route::put('/user/update_profile', [ProfileController::class, 'update'])
+        ->name('user.update');
 });
 
 require __DIR__.'/auth.php';

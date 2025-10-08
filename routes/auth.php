@@ -13,6 +13,7 @@ use App\Http\Controllers\Auth\ConfirmablePasswordController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\MapController;
 use App\Http\Controllers\TariffController; // 新增費率控制器
+use App\Http\Controllers\ReservationController;
 // use App\Http\Controllers\UserController; // 如果需要的話取消註解
 //10/1 上傳的檔案有合併過路徑，如果有問題先檢查這邊
 
@@ -104,6 +105,13 @@ Route::middleware('custom.auth')->group(function () {
 
 	// 取得目前 Session 中的 token
 	Route::get('/auth/token', [ExternalAuthController::class, 'getSessionToken'])->name('auth.token');
+
+    // Reservations - view and cancel via external API
+    Route::get('/reservations/top', [ReservationController::class, 'top'])->name('reservations.top');
+    Route::delete('/reservations/cancel', [ReservationController::class, 'cancel'])->name('reservations.cancel');
+
+    // Reservations - 使用自訂驗證（Session token）
+    Route::post('/reservations', [ReservationController::class, 'store'])->name('reservations.store');
 
     // 如果你想要在登入後也能訪問地圖API（可選）
     // Route::get('/map/stations', [MapController::class, 'getStations'])->name('map.stations.auth');
