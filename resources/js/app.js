@@ -6,7 +6,7 @@ window.Alpine = Alpine;
 
 Alpine.start();
 
-const BASE_URL = 'http://120.110.115.126:18081'; // TODO: 換成註冊用寄碼 API 的主機
+const BASE_URL = 'http://120.110.115.126:18081'; // ✅ 你的 API 主機
 
 document.addEventListener('DOMContentLoaded', () => {
   const emailInput = document.getElementById('email');
@@ -47,14 +47,15 @@ document.addEventListener('DOMContentLoaded', () => {
       getCodeBtn.disabled = true;
       getCodeBtn.textContent = '發送中…';
 
-      // ⚠ 若有註冊專用 API，請把這行改成那一支
-      const url = `${BASE_URL}/auth/check_mail_code?loginMail=${encodeURIComponent(email)}`;
+      // ✅ 使用正確的「寄送驗證碼」API
+      const url = `${BASE_URL}/auth/send_mail_code?loginMail=${encodeURIComponent(email)}`;
       const res = await fetch(url, { method: 'GET', headers: { Accept: '*/*' } });
       const data = await res.json().catch(() => ({}));
 
-      if (res.ok && (data?.success === true || data?.code === 0)) {
+      if (res.ok && (data?.success === true || data?.code === 20000)) {
         showMsg(data?.message || '驗證碼已寄出，請到信箱查收！', true);
         startCountdown(60);
+        console.log('✅ 驗證碼：', data?.data); // 開發用
       } else {
         showMsg(data?.message || `發送失敗（HTTP ${res.status}）`, false);
         getCodeBtn.disabled = false;

@@ -35,7 +35,7 @@
             <x-input-error :messages="$errors->get('email')" class="mt-2" />
         </div>
 
-        {{-- ✅ 新增驗證碼欄位 --}}
+        {{-- ✅ 新增驗證碼欄位--}}
         <div class="mt-3 flex items-center gap-2">
             <input id="verifyCode" type="text" name="verifyCode"
                 class="border rounded p-2 w-full"
@@ -46,6 +46,7 @@
             </button>
         </div>
         <div id="msg" class="mt-2 text-sm"></div>
+        
 
 
         <div>
