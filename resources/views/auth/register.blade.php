@@ -35,25 +35,37 @@
             <x-input-error :messages="$errors->get('email')" class="mt-2" />
         </div>
 
-        {{-- ✅ 新增驗證碼欄位--}}
+       {{-- 驗證碼欄位區 --}}
         <div class="mt-3 flex items-center gap-2">
-            <input id="verifyCode" type="text" name="verifyCode"
+            <input
+                id="verifyCode"
+                type="text"
+                name="verifyCode"
                 class="border rounded p-2 w-full"
-                placeholder="輸入收到的驗證碼">
-            <button id="getCodeBtn" type="button"
-                class="px-3 py-2 bg-blue-500 text-white rounded">
-                取得驗證碼
-            </button>
-        </div>
-        <div id="msg" class="mt-2 text-sm"></div>
-        
+                placeholder="輸入收到的驗證碼"
+        >
+        <button
+            id="getCodeBtn"
+            type="button"
+            class="px-3 py-2 bg-blue-500 text-white rounded"
+        >
+            取得驗證碼
+        </button>
+        <button
+            id="checkCodeBtn"
+            type="button"
+            class="px-3 py-2 bg-gray-500 text-white rounded"
+        >
+            確認驗證碼
+        </button>
+    </div>
 
+    {{-- 驗證結果訊息 --}}
+    <div id="msg" class="mt-2 text-sm"></div>
 
-        <div>
-            <x-input-label for="phone" value="手機" />
-            <x-text-input id="phone" name="phone" type="tel"
-                class="block mt-1 w-full" :value="old('phone')" />
-        </div>
+    {{-- 驗證通過旗標（隱藏） --}}
+    <input type="hidden" id="emailCodeOK" name="emailCodeOK" value="0">
+
 
 
         {{-- Breeze 預設會處理的欄位 --}}
