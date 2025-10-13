@@ -58,9 +58,6 @@ Route::middleware('guest')->group(function () {
 
     Route::get('/user/info', [ExternalAuthController::class, 'userInfo'])->name('user.info');
 
-    // === 新增費率查詢路由（暫時放在 guest 中間件，視需求可移到 auth） ===
-    Route::get('/user/purchase/tariff', [TariffController::class, 'getTariff'])->name('user.purchase.tariff');
-
      Route::get('/test-route', function() {
     return response()->json(['message' => '路由測試成功']);
     });
@@ -68,6 +65,9 @@ Route::middleware('guest')->group(function () {
 
 // ------------ 已登入可訪問 ------------
 Route::middleware('custom.auth')->group(function () {
+        // === 新增費率查詢路由（暫時放在 guest 中間件，視需求可移到 auth） ===
+     Route::get('/user/purchase/tariff', [TariffController::class, 'getTariff'])->name('user.purchase.tariff');
+
     // Email 驗證流程
     Route::get('/verify-email', EmailVerificationPromptController::class)->name('verification.notice');
     Route::get('/verify-email/{id}/{hash}', VerifyEmailController::class)

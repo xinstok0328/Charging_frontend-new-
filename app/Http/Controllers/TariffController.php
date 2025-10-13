@@ -6,29 +6,21 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Validator;
 
 class TariffController extends Controller
 {
     /**
      * Get charging tariff information
+     * user_id 和 user_tier_id 從 session 自動獲取
+     * pile_id 從請求參數獲取
      */
     public function getTariff(Request $request): JsonResponse
     {
-        // // 調試用：立即回傳測試資料
-        //     return response()->json([
-        //         'debug' => true,
-        //         'message' => 'Controller loaded successfully',
-        //         'request_params' => $request->all(),
-        //         'timestamp' => now()
-        //     ]);
-
-
         try {
-            // Validate request parameters
+            // 只驗證 pile_id
             $validator = Validator::make($request->all(), [
-                'user_id' => 'required|integer|min:1',
-                'user_tier_id' => 'required|integer|min:1',
                 'pile_id' => 'required|integer|min:1',
             ]);
 
@@ -41,15 +33,97 @@ class TariffController extends Controller
                 ], 422);
             }
 
-            $userId = $request->input('user_id');
-            $userTierId = $request->input('user_tier_id');
+            // 從 session 獲取用戶資訊
+            $userData = Session::get('user_data');
+            $userId = $userData['id'] ?? null;
+            $userTierId = $userData['user_tier_id'] ?? $userId; // 如果沒有 user_tier_id，使用 user_id
+
+            // Fallback：若缺少 user_id 但有 auth_token，呼叫外部 /user/info 補齊並寫回 Session
+            if (!$userId) {
+                $token = Session::get('auth_token');
+                if (!empty($token)) {
+                    try {
+                        $base = config('services.backend.base_url', env('EXT_API_BASE', 'http://120.110.115.126:18081'));
+                        $endpoint = rtrim($base, '/') . '/user/info';
+
+                        Log::info('TariffController fallback fetching user info', [
+                            'endpoint' => $endpoint,
+                            'token_length' => strlen($token),
+                            'session_id' => Session::getId()
+                        ]);
+
+                        $resp = Http::timeout(10)
+                            ->withHeaders([
+                                'Accept' => 'application/json',
+                                'Content-Type' => 'application/json',
+                                'Authorization' => 'Bearer ' . $token,
+                            ])->get($endpoint);
+
+                        if ($resp->successful()) {
+                            $json = $resp->json();
+                            $apiUser = $json['data'] ?? [];
+                            if (!empty($apiUser)) {
+                                $standardized = [
+                                    'id' => $apiUser['id'] ?? null,
+                                    'account' => $apiUser['account'] ?? ($userData['account'] ?? null),
+                                    'name' => $apiUser['name'] ?? ($userData['name'] ?? null),
+                                    'email' => $apiUser['email'] ?? ($userData['email'] ?? null),
+                                    'phone' => $apiUser['phone'] ?? ($userData['phone'] ?? null),
+                                    'role_name' => $apiUser['role_name'] ?? ($userData['role_name'] ?? null),
+                                    'role_code' => $apiUser['role_code'] ?? ($userData['role_code'] ?? null),
+                                    'create_time' => $apiUser['create_time'] ?? ($userData['create_time'] ?? null),
+                                    'modify_time' => $apiUser['modify_time'] ?? ($userData['modify_time'] ?? null),
+                                ];
+
+                                // 保留既有資料並覆蓋更新
+                                $merged = array_merge($userData ?? [], $standardized);
+                                Session::put('user_data', $merged);
+                                $userData = $merged;
+                                $userId = $merged['id'] ?? null;
+                                $userTierId = $merged['user_tier_id'] ?? $userId;
+
+                                Log::info('TariffController fallback updated session user_data', [
+                                    'has_id' => (bool) $userId,
+                                ]);
+                            }
+                        } else if ($resp->status() === 401) {
+                            Log::warning('TariffController fallback user info unauthorized, clearing session');
+                            Session::forget(['user_authenticated','user_account','auth_token','user_data']);
+                            Session::flush();
+                        } else {
+                            Log::warning('TariffController fallback user info failed', [
+                                'status' => $resp->status(),
+                                'body' => $resp->body()
+                            ]);
+                        }
+                    } catch (\Throwable $e) {
+                        Log::warning('TariffController fallback user info error', [
+                            'error' => $e->getMessage()
+                        ]);
+                    }
+                }
+            }
+            
+            // 從請求獲取 pile_id
             $pileId = $request->input('pile_id');
+
+            // 檢查用戶是否已登入
+            if (!$userId) {
+                Log::warning('Tariff query failed: User not logged in or session expired');
+                return response()->json([
+                    'success' => false,
+                    'code' => 401,
+                    'message' => 'Please log in first',
+                    'data' => null
+                ], 401);
+            }
 
             Log::info('Tariff query request', [
                 'user_id' => $userId,
                 'user_tier_id' => $userTierId,
                 'pile_id' => $pileId,
-                'ip' => $request->ip()
+                'ip' => $request->ip(),
+                'source' => 'session'
             ]);
 
             // Call external API
@@ -98,77 +172,50 @@ class TariffController extends Controller
             $apiPath = config('services.tariff_api.endpoint', '/user/purchase/tariff');
             $apiTimeout = config('services.tariff_api.timeout', 30);
             
-            // 嘗試不同的參數格式
-        $queryParams = [
-            'user_id' => $userId,
-            'user_tier_id' => $userTierId, 
-            'pile_id' => $pileId
-        ];
-        
-        Log::info('API Request Details', [
-            'full_url' => $externalApiUrl . $apiPath . '?' . http_build_query($queryParams),
-            'method' => 'GET',
-            'headers' => [
-                'Accept' => 'application/json',
-                'Content-Type' => 'application/json',
-                'Authorization' => 'Bearer ' . config('services.tariff_api.token'),
-                'X-API-Key' => config('services.tariff_api.token'),
-            ]
-        ]);
-        
-        $response = Http::timeout($apiTimeout)
-            ->withHeaders([
-                'Accept' => 'application/json',
-                'Content-Type' => 'application/json',
-                'Authorization' => 'Bearer ' . config('services.tariff_api.token'),
-                'X-API-Key' => config('services.tariff_api.token'),
-            ])
-            ->get($externalApiUrl . $apiPath, $queryParams);
+            // 準備 API 請求參數
+            $queryParams = [
+                'user_id' => $userId,
+                'user_tier_id' => $userTierId, 
+                'pile_id' => $pileId
+            ];
             
-        Log::info('API Response Details', [
-            'status' => $response->status(),
-            'headers' => $response->headers(),
-            'body' => $response->body(),
-            'json' => $response->json()
-        ]);    
-
-            // // Prepare API request parameters
-            // $queryParams = [
-            //     'user_id' => $userId,
-            //     'user_tier_id' => $userTierId,
-            //     'pile_id' => $pileId
-            // ];
-
-            // Log::info('Calling external tariff API', [
-            //     'url' => $externalApiUrl . $apiPath,
-            //     'params' => $queryParams
-            // ]);
-
-            // // Send HTTP request to external API
-            // $response = Http::timeout($apiTimeout)
-            //     ->withHeaders([
-            //         'Accept' => 'application/json',
-            //         'Content-Type' => 'application/json',
-            //         'Authorization' => 'Bearer ' . config('services.tariff_api.token'),
-            //         'X-API-Key' => config('services.tariff_api.token'),
-            //     ])
-            //     ->get($externalApiUrl . $apiPath, $queryParams);
-
-            // // Check HTTP status code
-            // if (!$response->successful()) {
-            //     Log::error('External API response error', [
-            //         'status' => $response->status(),
-            //         'body' => $response->body()
-            //     ]);
-            //     return null;
-            // }
-
-            // // Parse API response
-            // $apiData = $response->json();
+            Log::info('API Request Details', [
+                'full_url' => $externalApiUrl . $apiPath . '?' . http_build_query($queryParams),
+                'method' => 'GET',
+                'params' => $queryParams
+            ]);
             
-            // Log::info('External API response', [
-            //     'response' => $apiData
-            // ]);
+            // 發送 HTTP 請求到外部 API
+            $response = Http::timeout($apiTimeout)
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'Authorization' => 'Bearer ' . config('services.tariff_api.token'),
+                    'X-API-Key' => config('services.tariff_api.token'),
+                ])
+                ->get($externalApiUrl . $apiPath, $queryParams);
+            
+            Log::info('API Response Details', [
+                'status' => $response->status(),
+                'body' => $response->body()
+            ]);
+
+            // Check HTTP status code
+            if (!$response->successful()) {
+                Log::error('External API response error', [
+                    'status' => $response->status(),
+                    'body' => $response->body()
+                ]);
+                return null;
+            }
+
+            // Parse API response
+            $apiData = $response->json();
+            
+            Log::info('External API response parsed', [
+                'success' => $apiData['success'] ?? 'N/A',
+                'code' => $apiData['code'] ?? 'N/A'
+            ]);
 
             // Check API response format
             if (!isset($apiData['success'])) {
@@ -214,18 +261,6 @@ class TariffController extends Controller
             'effective_from' => $externalData['effective_from'] ?? now()->toISOString(),
             'effective_to' => $externalData['effective_to'] ?? now()->addYear()->toISOString(),
         ];
-    }
-
-    /**
-     * Simple rate info endpoint for frontend AJAX
-     */
-    public function getRateInfo(Request $request): JsonResponse
-    {
-        $userId = $request->input('user_id', 6);
-        $userTierId = $request->input('user_tier_id', 6);
-        $pileId = $request->input('pile_id', 6);
-
-        return $this->getTariff($request);
     }
 
     /**

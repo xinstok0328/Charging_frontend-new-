@@ -106,7 +106,7 @@ const API_CONFIG = {
     },
     // 允許三種來源，依你實際情況擇一即可
     get token() {
-        return @json(session('auth_token')) || localStorage.getItem('access_token') || '';
+        return localStorage.getItem('auth_token') || @json(session('auth_token')) || '';
     }
 };
 

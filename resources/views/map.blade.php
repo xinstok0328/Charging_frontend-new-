@@ -658,9 +658,10 @@
         </div>
         
         <div class="data-item">
-          <div class="data-label">API 回應碼</div>
+          <div class="data-label">API 回應碼</div> 
           <div class="data-value" id="responseCode">載入中...</div>
         </div>
+
       </div>
     </div>
   </div>
@@ -686,7 +687,12 @@
       <button onclick="openMyReservations()" class="control-btn btn-register">
         查看我的預約
       </button>
+      <!-- </button>
+      <button onclick="showRegister()" class="control-btn btn-register">
+        註冊新用戶
+      </button> -->
       <button onclick="logout()" class="control-btn btn-logout">
+    
         登出
       </button>
     </div>
@@ -704,26 +710,14 @@
       <input type="number" id="station-id" placeholder="可選">
     </div>
     
-    <!-- 新增費率查詢參數 -->
-    <!-- <div class="form-group">
-      <label for="user-id">用戶ID</label>
-      <input type="number" id="user-id" placeholder="用於費率查詢">
-    </div>
-    
-    <div class="form-group">
-      <label for="user-tier-id">用戶層級ID</label>
-      <input type="number" id="user-tier-id" placeholder="用於費率查詢">
-    </div>
-    
     <div class="form-group">
       <label for="pile-id">充電樁ID</label>
-      <input type="number" id="pile-id" placeholder="用於費率查詢">
-    </div> -->
+      <input type="number" id="pile-id" placeholder="用於費率查詢" value="6">
+    </div>
     
     <div class="button-group">
       <button onclick="loadNearbyStations()" class="station-btn">載入附近充電站</button>
       <button onclick="loadAllStations()" class="station-btn secondary">載入所有充電站</button>
-      <!-- <button onclick="clearMarkers()" class="station-btn secondary">清除標記</button> -->
     </div>
   </div>
 
@@ -927,26 +921,61 @@
 
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
-    // ✅ 全域變數 - 添加預設座標
+    // 全域變數
     let map;
     let csrfToken = '';
+    let authToken = '';
     let userLocationMarker = null;
     let markersGroup;
     let rateUpdateInterval;
 
-    // ✅ 新增：預設座標（台中市中心）
+    // 預設座標（台中市中心）
     const DEFAULT_LAT = 24.1477;
     const DEFAULT_LNG = 120.6736;
 
-    // 初始化 CSRF Token
-    function initializeCSRFToken() {
-      const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    // ✅ 修正：加入 Authorization header
+    function getAuthHeaders() {
+       const headers = {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': csrfToken,
+        'X-Requested-With': 'XMLHttpRequest'
+      };
+    
+      const token = localStorage.getItem('auth_token');
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+    console.log('✅ Authorization header 已加入，token 前20字:', token.substring(0, 20));
+  } else {
+    console.warn('⚠️ localStorage 中沒有 token');
+  }
+  
+  return headers;
+
+    }
+
+    // 初始化 Token
+function initializeAuthToken() {
+  // 從 localStorage 讀取 token
+  const token = localStorage.getItem('auth_token');
+  
+  if (!token) {
+    console.warn('未找到認證 token，某些功能可能無法使用');
+  } else {
+    console.log('成功載入認證 token，長度:', token.length);
+  }
+}
+
+
+     // 初始化 CSRF Token
+     function initializeCSRFToken() {
+     const csrfMeta = document.querySelector('meta[name="csrf-token"]');
       if (csrfMeta) {
         csrfToken = csrfMeta.getAttribute('content');
       } else {
         console.warn('CSRF token not found');
-      }
-    }
+       }
+     }
 
     // 調整地圖容器大小
     function resizeMapContainer() {
@@ -1102,11 +1131,20 @@
       });
     }
 
-    // 載入費率資料
-    // 載入費率資料 - 適配新的後端 API (只需要 pileId)
 async function loadRateData() {
   try {
-    // ✅ 只獲取 pileId，移除 user_id 和 user_tier_id
+    // ✅ 步驟1：讀取 token
+    const token = localStorage.getItem('auth_token');
+    
+    console.log('===== TOKEN 檢查 =====');
+    console.log('token 值:', token);
+    console.log('token 長度:', token ? token.length : 0);
+    console.log('token 前20字:', token ? token.substring(0, 20) : 'N/A');
+    
+    if (!token) {
+      throw new Error('未找到認證 token，請先登入');
+    }
+
     const getPileId = () => {
       const element = document.getElementById('pile-id');
       if (!element) {
@@ -1118,24 +1156,48 @@ async function loadRateData() {
     };
 
     const pileId = getPileId();
+    const params = new URLSearchParams({ pile_id: pileId });
 
-    console.log('費率查詢參數:', { pileId });
+    // ✅ 步驟2：組裝 headers - 直接使用剛讀取的 token
+ const bearerToken = 'Bearer ' + token;
+    console.log('===== Authorization 組裝 =====');
+    console.log('Bearer Token 前30字:', bearerToken.substring(0, 30));
+    console.log('Bearer Token 長度:', bearerToken.length);
+    
+    const headers = {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      'X-CSRF-TOKEN': csrfToken,
+      'X-Requested-With': 'XMLHttpRequest',
+      'Authorization': bearerToken // ✅ 使用變數
+    };
+    
+    console.log('===== HEADERS 檢查 =====');
+    console.log('完整 headers:', headers);
+    console.log('headers.Authorization:', headers['Authorization']);
+    console.log('headers.Authorization 長度:', headers['Authorization'].length);
+    console.log('headers.Authorization 前30字:', headers['Authorization'].substring(0, 30));
+    console.log('與 localStorage 是否一致:', headers['Authorization'] === bearerToken);
 
-    // ✅ 使用駝峰式命名 pileId（而非 pile_id）
-    const params = new URLSearchParams({
-      pileId: pileId
-    });
-
+    // ✅ 步驟3：發送請求
+    console.log('===== 發送請求 =====');
+    console.log('URL:', `/user/purchase/tariff?${params.toString()}`);
+    
     const response = await fetch(`/user/purchase/tariff?${params.toString()}`, {
       method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'X-CSRF-TOKEN': csrfToken,
-        'X-Requested-With': 'XMLHttpRequest'
-      }
+      headers: headers,
+      credentials: 'same-origin'
     });
 
+    console.log('===== 回應檢查 =====');
+    console.log('Status:', response.status);
+    console.log('OK:', response.ok);
+
     if (!response.ok) {
+      if (response.status === 401) {
+        localStorage.removeItem('auth_token');
+        throw new Error('認證已過期，請重新登入');
+      }
       const errorText = await response.text();
       throw new Error(`HTTP ${response.status}: ${errorText}`);
     }
@@ -1143,7 +1205,6 @@ async function loadRateData() {
     const apiResponse = await response.json();
     console.log('費率API回應:', apiResponse);
     
-    // 檢查後端返回的資料格式
     if (apiResponse.success && apiResponse.data) {
       updateRateMessageContent(apiResponse);
     } else {
@@ -1159,6 +1220,8 @@ async function loadRateData() {
     });
   }
 }
+
+
 
     // 開始自動更新費率
     function startRateAutoUpdate() {
@@ -1190,11 +1253,10 @@ async function loadRateData() {
       getCurrentLocation();
     }
 
-    // ✅ 修正：載入地圖標記
+    // 載入地圖標記
     function loadMapMarkers(userLat = null, userLng = null, searchDistance = null, stationId = null) {
       showLoading(true);
       
-      // ✅ 如果沒有提供座標，使用預設座標（台中）
       if (userLat === null || userLng === null) {
         userLat = DEFAULT_LAT;
         userLng = DEFAULT_LNG;
@@ -1212,7 +1274,6 @@ async function loadRateData() {
         stationId = inputValue ? parseInt(inputValue) : null;
       }
       
-      // ✅ 確保始終添加 lat 和 lng 參數
       const params = new URLSearchParams();
       params.append('lat', parseFloat(userLat).toFixed(6));
       params.append('lng', parseFloat(userLng).toFixed(6));
@@ -1310,7 +1371,8 @@ async function loadRateData() {
           'Content-Type': 'application/json',
           'X-CSRF-TOKEN': csrfToken,
           'X-Requested-With': 'XMLHttpRequest'
-        }
+        },
+        credentials: 'same-origin'
       })
       .then(response => {
         if (!response.ok) {
@@ -1320,7 +1382,7 @@ async function loadRateData() {
       });
     }
 
-    // ✅ 修正：載入附近充電站
+    // 載入附近充電站
     function loadNearbyStations() {
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
@@ -1351,19 +1413,17 @@ async function loadRateData() {
           function(error) {
             console.error('無法取得位置:', error);
             showError('無法取得您的位置，將使用預設位置（台中）');
-            // ✅ 使用預設座標
             loadMapMarkers(DEFAULT_LAT, DEFAULT_LNG);
           }
         );
       } else {
         console.error('瀏覽器不支援地理位置');
         showError('瀏覽器不支援地理位置，將使用預設位置（台中）');
-        // ✅ 使用預設座標
         loadMapMarkers(DEFAULT_LAT, DEFAULT_LNG);
       }
     }
 
-    // ✅ 修正：載入所有充電站
+    // 載入所有充電站
     function loadAllStations() {
       loadMapMarkers(DEFAULT_LAT, DEFAULT_LNG);
     }
@@ -1436,10 +1496,8 @@ async function loadRateData() {
         
         const response = await fetch('/user/info', {
           method: 'GET',
-          headers: {
-            'Accept': 'application/json',
-            'X-CSRF-TOKEN': csrfToken
-          }
+          headers: getAuthHeaders(),
+          credentials: 'same-origin'
         });
 
         if (!response.ok) {
@@ -1488,13 +1546,10 @@ async function loadRateData() {
         document.getElementById('updateProfileModal').style.display = 'block';
         document.getElementById('updateProfileAlert').innerHTML = '';
         
-        // 載入現有用戶資料
         const response = await fetch('/user/info', {
           method: 'GET',
-          headers: {
-            'Accept': 'application/json',
-            'X-CSRF-TOKEN': csrfToken
-          }
+          headers: getAuthHeaders(),
+          credentials: 'same-origin'
         });
 
         if (response.ok) {
@@ -1536,7 +1591,7 @@ async function loadRateData() {
         alertDiv.innerHTML = '';
         
         if (newPassword.length < 6) {
-          alertDiv.innerHTML = '<div class="alert alert-error">新密碼至少需要6個字元！</div>';
+          alertDiv.innerHTML = '<div class="alert alert-error">新密碼至少需要6個字元!</div>';
           return;
         }
 
@@ -1554,10 +1609,9 @@ async function loadRateData() {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Accept': 'application/json',
-              'X-CSRF-TOKEN': csrfToken,
-              'X-Requested-With': 'XMLHttpRequest'
+              ...getAuthHeaders()
             },
+            credentials: 'same-origin',
             body: JSON.stringify({
               oldPassword: oldPassword,
               password: newPassword
@@ -1573,7 +1627,7 @@ async function loadRateData() {
           }
 
           if (response.ok && data.success) {
-            alertDiv.innerHTML = '<div class="alert alert-success">密碼更新成功！</div>';
+            alertDiv.innerHTML = '<div class="alert alert-success">密碼更新成功!</div>';
             document.getElementById('passwordForm').reset();
             setTimeout(() => {
               closeModal('changePasswordModal');
@@ -1613,19 +1667,16 @@ async function loadRateData() {
         const data = Object.fromEntries(formData.entries());
         const alertDiv = document.getElementById('updateProfileAlert');
         
-        // 清除之前的提示
         alertDiv.innerHTML = '';
         
-        // 驗證必填欄位
         if (!data.name || !data.email) {
-          alertDiv.innerHTML = '<div class="alert alert-error">請填寫所有必填欄位！</div>';
+          alertDiv.innerHTML = '<div class="alert alert-error">請填寫所有必填欄位!</div>';
           return;
         }
         
-        // 驗證Email格式
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(data.email)) {
-          alertDiv.innerHTML = '<div class="alert alert-error">請輸入有效的Email格式！</div>';
+          alertDiv.innerHTML = '<div class="alert alert-error">請輸入有效的Email格式!</div>';
           return;
         }
 
@@ -1634,7 +1685,6 @@ async function loadRateData() {
           submitBtn.disabled = true;
           submitBtn.textContent = '更新中...';
 
-          // 檢查是否有 CSRF token
           if (!csrfToken) {
             alertDiv.innerHTML = '<div class="alert alert-error">安全驗證失敗，請重新整理頁面</div>';
             return;
@@ -1644,10 +1694,9 @@ async function loadRateData() {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
-              'Accept': 'application/json',
-              'X-CSRF-TOKEN': csrfToken,
-              'X-Requested-With': 'XMLHttpRequest'
+              ...getAuthHeaders()
             },
+            credentials: 'same-origin',
             body: JSON.stringify({
               name: data.name?.trim(),
               email: data.email?.trim(),
@@ -1664,7 +1713,7 @@ async function loadRateData() {
           }
 
           if (response.ok && responseData.success) {
-            alertDiv.innerHTML = '<div class="alert alert-success">會員資料更新成功！</div>';
+            alertDiv.innerHTML = '<div class="alert alert-success">會員資料更新成功!</div>';
             setTimeout(() => {
               closeModal('updateProfileModal');
             }, 2000);
@@ -1706,17 +1755,17 @@ async function loadRateData() {
         alertDiv.innerHTML = '';
         
         if (!data.name || !data.email || !data.password || !data.password_confirmation) {
-          alertDiv.innerHTML = '<div class="alert alert-error">請填寫所有必填欄位！</div>';
+          alertDiv.innerHTML = '<div class="alert alert-error">請填寫所有必填欄位!</div>';
           return;
         }
         
         if (data.password !== data.password_confirmation) {
-          alertDiv.innerHTML = '<div class="alert alert-error">密碼與確認密碼不符！</div>';
+          alertDiv.innerHTML = '<div class="alert alert-error">密碼與確認密碼不符!</div>';
           return;
         }
         
         if (data.password.length < 6) {
-          alertDiv.innerHTML = '<div class="alert alert-error">密碼至少需要6個字元！</div>';
+          alertDiv.innerHTML = '<div class="alert alert-error">密碼至少需要6個字元!</div>';
           return;
         }
 
@@ -1733,6 +1782,7 @@ async function loadRateData() {
               'X-CSRF-TOKEN': csrfToken,
               'X-Requested-With': 'XMLHttpRequest'
             },
+            credentials: 'same-origin',
             body: JSON.stringify(data)
           });
 
@@ -1745,7 +1795,7 @@ async function loadRateData() {
           }
 
           if (response.ok) {
-            alertDiv.innerHTML = '<div class="alert alert-success">註冊成功！即將跳轉...</div>';
+            alertDiv.innerHTML = '<div class="alert alert-success">註冊成功!即將跳轉...</div>';
             document.getElementById('registerForm').reset();
             setTimeout(() => {
               closeModal('registerModal');
@@ -1775,20 +1825,24 @@ async function loadRateData() {
       });
     }
 
-    // 登出功能
+    // ✅ 修正：登出功能 - 移除 Authorization header
     async function logout() {
-      if (confirm('確定要登出嗎？')) {
+      if (confirm('確定要登出嗎?')) {
         try {
           const response = await fetch('/logout', {
             method: 'POST',
             headers: {
               'X-CSRF-TOKEN': csrfToken
-            }
+            },
+            credentials: 'same-origin'
           });
 
+          // 可選：清除 localStorage（如果有儲存其他資料）
+          localStorage.clear();
           window.location.href = '/login';
         } catch (error) {
           console.error('Logout error:', error);
+          localStorage.clear();
           window.location.href = '/login';
         }
       }
@@ -1818,12 +1872,48 @@ async function loadRateData() {
     // 頁面載入完成後初始化
     document.addEventListener('DOMContentLoaded', function() {
       initializeCSRFToken();
+       // ✅ 添加：檢查 token 有效性
+  const token = localStorage.getItem('auth_token');
+  if (token) {
+    try {
+      const parts = token.split('.');
+      const payload = JSON.parse(atob(parts[1]));
+      const isExpired = Date.now() > payload.exp * 1000;
+      
+      if (isExpired) {
+        console.error('❌ Token 已過期，清除並導向登入頁');
+        localStorage.clear();
+        alert('登入已過期，請重新登入');
+        window.location.href = '/login';
+        return;
+      }
+      
+      console.log('✅ Token 有效');
+      authToken = token;
+    } catch (error) {
+      console.error('❌ Token 格式錯誤:', error);
+      localStorage.clear();
+      window.location.href = '/login';
+      return;
+    }
+  } else {
+    console.warn('⚠️ 未找到 token');
+  }
+      initializeAuthToken(); 
       resizeMapContainer();
       initializeMap();
       handlePasswordForm();
       handleUpdateProfileForm();
       handleRegisterForm();
     });
+
+    // 登入成功後儲存 token
+function saveAuthToken(token) {
+  authToken = token;
+  localStorage.setItem('auth_token', token);
+  console.log('Token 已儲存');
+}
+
 
     // 視窗大小改變時重新調整地圖容器高度
     window.addEventListener('resize', resizeMapContainer);
