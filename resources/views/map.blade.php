@@ -734,28 +734,104 @@
 
   <!-- Reservation Modal -->
   <div id="reservation-backdrop" class="reservation-modal-backdrop" style="position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: none; z-index: 1002;"></div>
-  <div id="reservation-modal" class="reservation-modal" role="dialog" aria-modal="true" style="position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); background: #fff; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); width: 420px; max-width: calc(100% - 32px); display: none; z-index: 1003;">
-    <header style="padding:14px 16px;border-bottom:1px solid #eee;font-weight:bold;">我要預約</header>
-    <div class="body" style="padding:16px;">
-      <div class="row" style="display:grid;grid-template-columns:100px 1fr;gap:8px;align-items:center;margin-bottom:10px;"><div>站點</div><div id="resv-address">-</div></div>
-      <div class="row" style="display:grid;grid-template-columns:100px 1fr;gap:8px;align-items:center;margin-bottom:10px;"><div>型號</div><div id="resv-model">-</div></div>
-      <div class="row" style="display:grid;grid-template-columns:100px 1fr;gap:8px;align-items:center;margin-bottom:10px;"><div>接頭</div><div id="resv-connector">-</div></div>
-      <div class="row" style="display:grid;grid-template-columns:100px 1fr;gap:8px;align-items:center;margin-bottom:10px;"><div>最大功率</div><div id="resv-maxkw">-</div></div>
+  <div id="reservation-modal" class="reservation-modal" role="dialog" aria-modal="true" style="position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); background: #fff; border-radius: 20px; box-shadow: 0 25px 50px rgba(0,0,0,0.15); width: 500px; max-width: calc(100% - 32px); display: none; z-index: 1003; overflow: hidden;">
+    <!-- Header -->
+    <div style="background: linear-gradient(135deg, #2b7a0b 0%, #1e5a08 100%); color: white; padding: 20px; text-align: center;">
+      <h2 style="margin: 0; font-size: 20px; font-weight: 600;">我要預約</h2>
+    </div>
+    
+    <!-- Body -->
+    <div style="padding: 28px;">
+      <!-- Station Info -->
+      <div style="background: #f8f9fa; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div>
+            <div style="font-size: 12px; color: #6c757d; margin-bottom: 6px; font-weight: 500;">站點</div>
+            <div id="resv-address" style="font-weight: 600; color: #2d3748; font-size: 14px;">-</div>
+          </div>
+          <div>
+            <div style="font-size: 12px; color: #6c757d; margin-bottom: 6px; font-weight: 500;">型號</div>
+            <div id="resv-model" style="font-weight: 600; color: #2d3748; font-size: 14px;">-</div>
+          </div>
+          <div>
+            <div style="font-size: 12px; color: #6c757d; margin-bottom: 6px; font-weight: 500;">接頭</div>
+            <div id="resv-connector" style="font-weight: 600; color: #2d3748; font-size: 14px;">-</div>
+          </div>
+          <div>
+            <div style="font-size: 12px; color: #6c757d; margin-bottom: 6px; font-weight: 500;">最大功率</div>
+            <div id="resv-maxkw" style="font-weight: 600; color: #2d3748; font-size: 14px;">-</div>
+          </div>
+        </div>
+      </div>
+      
       <input type="hidden" id="resv-pile-id" />
-      <div class="row" style="display:grid;grid-template-columns:100px 1fr;gap:8px;align-items:center;margin-bottom:10px;">
-        <div>開始</div>
-        <div><input type="datetime-local" id="resv-start" step="1800"></div>
+      
+      <!-- Time Selection -->
+      <div style="margin-bottom: 24px;">
+        <!-- Start Time -->
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; font-size: 15px; font-weight: 600; color: #2d3748; margin-bottom: 10px;">開始時間</label>
+          <div class="custom-datetime-picker" style="display: flex; gap: 10px; align-items: center; background: #fff; padding: 14px; border-radius: 12px; border: 2px solid #e2e8f0; transition: all 0.2s;">
+            <input type="date" id="resv-start-date" style="padding: 12px 14px; border: 1px solid #d1d5db; border-radius: 8px; flex: 1; background: white; font-size: 15px; transition: border-color 0.2s;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <select id="resv-start-hour" style="padding: 12px 10px; border: 1px solid #d1d5db; border-radius: 8px; background: white; font-size: 15px; min-width: 75px; transition: border-color 0.2s;">
+                <!-- Options will be populated by JavaScript -->
+              </select>
+              <span style="font-weight: bold; color: #4a5568; font-size: 20px;">:</span>
+              <select id="resv-start-minute" style="padding: 12px 10px; border: 1px solid #d1d5db; border-radius: 8px; background: white; font-size: 15px; min-width: 75px; transition: border-color 0.2s;">
+                <option value="00">00</option><option value="15">15</option><option value="30">30</option><option value="45">45</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        
+        <!-- End Time -->
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; font-size: 15px; font-weight: 600; color: #2d3748; margin-bottom: 10px;">結束時間</label>
+          <div class="custom-datetime-picker" style="display: flex; gap: 10px; align-items: center; background: #fff; padding: 14px; border-radius: 12px; border: 2px solid #e2e8f0; transition: all 0.2s;">
+            <input type="date" id="resv-end-date" style="padding: 12px 14px; border: 1px solid #d1d5db; border-radius: 8px; flex: 1; background: white; font-size: 15px; transition: border-color 0.2s;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <select id="resv-end-hour" style="padding: 12px 10px; border: 1px solid #d1d5db; border-radius: 8px; background: white; font-size: 15px; min-width: 75px; transition: border-color 0.2s;">
+                <!-- Options will be populated by JavaScript -->
+              </select>
+              <span style="font-weight: bold; color: #4a5568; font-size: 20px;">:</span>
+              <select id="resv-end-minute" style="padding: 12px 10px; border: 1px solid #d1d5db; border-radius: 8px; background: white; font-size: 15px; min-width: 75px; transition: border-color 0.2s;">
+                <option value="00">00</option><option value="15">15</option><option value="30">30</option><option value="45">45</option>
+              </select>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="row" style="display:grid;grid-template-columns:100px 1fr;gap:8px;align-items:center;margin-bottom:10px;">
-        <div>結束</div>
-        <div><input type="datetime-local" id="resv-end" step="1800"></div>
-      </div>
-      <div id="resv-error" style="color:#d63031;font-size:12px;min-height:16px;"></div>
+      <!-- Error Message -->
+      <div id="resv-error" style="color: #e53e3e; font-size: 13px; min-height: 20px; margin-bottom: 20px; padding: 8px 12px; background: #fed7d7; border-radius: 8px; display: none;"></div>
     </div>
-    <div class="actions" style="display:flex;justify-content:flex-end;gap:10px;padding:12px 16px;border-top:1px solid #eee;">
-      <button id="resv-cancel" class="btn btn-secondary" style="padding:8px 12px;border-radius:6px;border:none;cursor:pointer;background:#e0e0e0;">取消</button>
-      <button id="resv-submit" class="btn btn-primary" style="padding:8px 12px;border-radius:6px;border:none;cursor:pointer;background:#2b7a0b;color:#fff;">確認預約</button>
+    
+    <!-- Actions -->
+    <div style="display: flex; gap: 16px; padding: 24px 28px; background: #f8f9fa; border-top: 1px solid #e2e8f0;">
+      <button id="resv-cancel" style="flex: 1; padding: 14px 24px; border-radius: 12px; border: 2px solid #e2e8f0; background: white; color: #4a5568; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s;">取消</button>
+      <button id="resv-submit" style="flex: 1; padding: 14px 24px; border-radius: 12px; border: none; background: linear-gradient(135deg, #2b7a0b 0%, #1e5a08 100%); color: white; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s;">我要預約</button>
     </div>
+    
+    <style>
+      .custom-datetime-picker input:focus,
+      .custom-datetime-picker select:focus {
+        outline: none;
+        border-color: #2b7a0b !important;
+        box-shadow: 0 0 0 3px rgba(43, 122, 11, 0.1);
+      }
+      .custom-datetime-picker:hover {
+        border-color: #cbd5e0;
+      }
+      #resv-cancel:hover {
+        background: #f7fafc;
+        border-color: #cbd5e0;
+      }
+      #resv-submit:hover {
+        background: linear-gradient(135deg, #1e5a08 0%, #164a06 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(43, 122, 11, 0.3);
+      }
+    </style>
   </div>
 
   <!-- Success Modal -->
@@ -767,7 +843,7 @@
           <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </div>
-      <h3 style="margin: 0 0 8px; font-size: 20px; font-weight: 600; color: #2d3748;">預約成功！</h3>
+      <h3 id="success-title" style="margin: 0 0 8px; font-size: 20px; font-weight: 600; color: #2d3748;">預約成功！</h3>
       <p id="success-message" style="margin: 0 0 20px; color: #718096; font-size: 14px; line-height: 1.5;">您的充電站預約已成功建立</p>
       <button id="success-close" style="background: linear-gradient(135deg, #00b894 0%, #00a085 100%); color: white; border: none; padding: 10px 24px; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s ease;">確定</button>
     </div>
@@ -1008,7 +1084,12 @@ function initializeAuthToken() {
 
     // 顯示成功彈窗
     function showSuccess(message) {
+      const successTitleEl = document.getElementById('success-title');
       const successMessageEl = document.getElementById('success-message');
+      
+      if (successTitleEl) {
+        successTitleEl.textContent = message || '操作成功！';
+      }
       if (successMessageEl) {
         successMessageEl.textContent = message || '操作成功！';
       }
@@ -1941,6 +2022,125 @@ function saveAuthToken(token) {
     }
     const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
+    // Smart DateTime Picker with validation
+    function initializeSmartDateTimePicker() {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const maxDate = new Date(today.getTime() + 14 * 24 * 60 * 60 * 1000); // 14 days from today
+      
+      // Set date constraints
+      document.getElementById('resv-start-date').min = formatDate(today);
+      document.getElementById('resv-start-date').max = formatDate(maxDate);
+      document.getElementById('resv-end-date').min = formatDate(today);
+      document.getElementById('resv-end-date').max = formatDate(maxDate);
+      
+      // Populate hour options based on current time and rules
+      populateHourOptions('resv-start-hour', 'resv-start-date');
+      populateHourOptions('resv-end-hour', 'resv-end-date');
+      
+      // Add event listeners for smart updates
+      document.getElementById('resv-start-date').addEventListener('change', () => {
+        populateHourOptions('resv-start-hour', 'resv-start-date');
+        updateEndTimeOptions();
+      });
+      
+      document.getElementById('resv-end-date').addEventListener('change', () => {
+        populateHourOptions('resv-end-hour', 'resv-end-date');
+        updateEndTimeOptions();
+      });
+      
+      document.getElementById('resv-start-hour').addEventListener('change', updateEndTimeOptions);
+      document.getElementById('resv-start-minute').addEventListener('change', updateEndTimeOptions);
+    }
+    
+    function populateHourOptions(hourSelectId, dateSelectId) {
+      const hourSelect = document.getElementById(hourSelectId);
+      const dateSelect = document.getElementById(dateSelectId);
+      const selectedDate = new Date(dateSelect.value);
+      const now = new Date();
+      
+      // Clear existing options
+      hourSelect.innerHTML = '';
+      
+      // Determine if this is today
+      const isToday = selectedDate.toDateString() === now.toDateString();
+      const minAdvanceTime = new Date(now.getTime() + 15 * 60000); // 15 minutes from now
+      
+      // Add hour options
+      for (let hour = 0; hour < 24; hour++) {
+        const option = document.createElement('option');
+        option.value = String(hour).padStart(2, '0');
+        option.textContent = String(hour).padStart(2, '0');
+        
+        // Disable hours that are too early
+        if (isToday && hour < minAdvanceTime.getHours()) {
+          option.disabled = true;
+        }
+        
+        hourSelect.appendChild(option);
+      }
+    }
+    
+    function updateEndTimeOptions() {
+      const startDate = document.getElementById('resv-start-date').value;
+      const startHour = parseInt(document.getElementById('resv-start-hour').value);
+      const startMinute = parseInt(document.getElementById('resv-start-minute').value);
+      
+      if (!startDate || isNaN(startHour) || isNaN(startMinute)) return;
+      
+      const startDateTime = new Date(`${startDate}T${String(startHour).padStart(2, '0')}:${String(startMinute).padStart(2, '0')}`);
+      const minEndTime = new Date(startDateTime.getTime() + 30 * 60000); // 30 minutes later
+      const maxEndTime = new Date(startDateTime.getTime() + 4 * 60 * 60000); // 4 hours later
+      
+      // Update end date if needed
+      const endDate = document.getElementById('resv-end-date');
+      const endHour = parseInt(document.getElementById('resv-end-hour').value);
+      const endMinute = parseInt(document.getElementById('resv-end-minute').value);
+      
+      if (endHour !== null && !isNaN(endHour) && endMinute !== null && !isNaN(endMinute)) {
+        const endDateTime = new Date(`${endDate.value}T${String(endHour).padStart(2, '0')}:${String(endMinute).padStart(2, '0')}`);
+        
+        if (endDateTime <= startDateTime) {
+          // Auto-adjust end time to minimum duration
+          const adjustedEnd = new Date(startDateTime.getTime() + 30 * 60000);
+          endDate.value = formatDate(adjustedEnd);
+          document.getElementById('resv-end-hour').value = String(adjustedEnd.getHours()).padStart(2, '0');
+          document.getElementById('resv-end-minute').value = String(adjustedEnd.getMinutes()).padStart(2, '0');
+          
+          console.log('Auto-adjusted end time to:', {
+            date: formatDate(adjustedEnd),
+            time: `${String(adjustedEnd.getHours()).padStart(2, '0')}:${String(adjustedEnd.getMinutes()).padStart(2, '0')}`,
+            duration: '30 minutes'
+          });
+        }
+      }
+    }
+    
+    function formatDate(d) {
+      const pad = (n) => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+    }
+    
+    // Format display time from UTC to local timezone
+    function formatDisplayTime(timeString) {
+      if (!timeString) return '-';
+      
+      try {
+        // Backend returns local time in YYYY-MM-DD HH:mm:ss format
+        // Display as-is without timezone conversion
+        console.log('Time formatting:', {
+          input: timeString,
+          display: timeString,
+          note: 'Backend returns local time, displaying as-is'
+        });
+        
+        return timeString;
+      } catch (e) {
+        console.error('Error formatting time:', timeString, e);
+        return timeString.replace('T', ' ');
+      }
+    }
+
     // (Toast helpers removed per request)
     document.addEventListener('click', function(e) {
       const btn = e.target.closest('.reserve-btn');
@@ -1966,12 +2166,36 @@ function saveAuthToken(token) {
         };
         const start = ceilToStep(addMinutes(nowDt, 15));
         const end = addMinutes(start, 60);
-        const toLocalInput = (d) => {
-          const pad = (n) => String(n).padStart(2,'0');
-          return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-        };
-        document.getElementById('resv-start').value = toLocalInput(start);
-        document.getElementById('resv-end').value = toLocalInput(end);
+        
+        // Set custom datetime picker values
+        const pad = (n) => String(n).padStart(2,'0');
+        const formatDate = (d) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+        const formatTime = (d) => ({
+          hour: pad(d.getHours()),
+          minute: pad(d.getMinutes())
+        });
+        
+        // Initialize smart datetime picker first
+        initializeSmartDateTimePicker();
+        
+        // Set start time
+        document.getElementById('resv-start-date').value = formatDate(start);
+        const startTime = formatTime(start);
+        document.getElementById('resv-start-hour').value = startTime.hour;
+        document.getElementById('resv-start-minute').value = startTime.minute;
+        
+        // Set end time
+        document.getElementById('resv-end-date').value = formatDate(end);
+        const endTime = formatTime(end);
+        document.getElementById('resv-end-hour').value = endTime.hour;
+        document.getElementById('resv-end-minute').value = endTime.minute;
+        
+        console.log('Default times set:', {
+          start: `${formatDate(start)} ${startTime.hour}:${startTime.minute}`,
+          end: `${formatDate(end)} ${endTime.hour}:${endTime.minute}`,
+          duration: Math.round((end - start) / 60000) + ' minutes'
+        });
+        
         document.getElementById('resv-error').textContent = '';
 
         document.getElementById('reservation-backdrop').style.display = 'block';
@@ -1997,22 +2221,84 @@ function saveAuthToken(token) {
     });
 
     document.getElementById('resv-submit').addEventListener('click', async () => withLock(async () => {
+      console.log('Submit button clicked');
+      
       const pileId = parseInt(document.getElementById('resv-pile-id').value || '0');
-      const startStr = document.getElementById('resv-start').value;
-      const endStr = document.getElementById('resv-end').value;
+      
+      // Get values from custom datetime picker
+      const startDate = document.getElementById('resv-start-date').value;
+      const startHour = document.getElementById('resv-start-hour').value;
+      const startMinute = document.getElementById('resv-start-minute').value;
+      const endDate = document.getElementById('resv-end-date').value;
+      const endHour = document.getElementById('resv-end-hour').value;
+      const endMinute = document.getElementById('resv-end-minute').value;
+      
+      console.log('Form values:', { pileId, startDate, startHour, startMinute, endDate, endHour, endMinute });
+      
+      const startStr = `${startDate}T${startHour}:${startMinute}`;
+      const endStr = `${endDate}T${endHour}:${endMinute}`;
       const errEl = document.getElementById('resv-error');
       errEl.textContent = '';
+      errEl.style.display = 'none';
 
       if (!pileId || !startStr || !endStr) {
         errEl.textContent = '請完整填寫';
+        errEl.style.display = 'block';
+        console.log('Form validation failed:', { pileId, startStr, endStr });
         return;
       }
 
-      // Convert local datetime to ISO with Z
-      const toIsoZ = (local) => {
+      // Convert local datetime to API format (subtract 8 hours for Taiwan timezone)
+      const toApiFormat = (local) => {
         const d = new Date(local);
-        return new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().replace(/\.\d{3}Z$/, 'Z');
+        // Subtract 8 hours to compensate for Taiwan timezone (UTC+8)
+        const adjustedTime = new Date(d.getTime() - 8 * 60 * 60 * 1000);
+        
+        const pad = (n) => String(n).padStart(2, '0');
+        const year = adjustedTime.getFullYear();
+        const month = pad(adjustedTime.getMonth() + 1);
+        const day = pad(adjustedTime.getDate());
+        const hours = pad(adjustedTime.getHours());
+        const minutes = pad(adjustedTime.getMinutes());
+        const seconds = pad(adjustedTime.getSeconds());
+        
+        // Return in YYYY-MM-DDTHH:mm:ss format
+        return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
       };
+      
+      console.log('Time conversion debug:', {
+        userInput: {
+          startDate: startDate,
+          startHour: startHour,
+          startMinute: startMinute,
+          endDate: endDate,
+          endHour: endHour,
+          endMinute: endMinute
+        },
+        constructedStrings: {
+          startStr: startStr,
+          endStr: endStr
+        },
+        parsedDates: {
+          startDate: new Date(startStr),
+          endDate: new Date(endStr)
+        },
+        timezoneAdjustment: {
+          originalStart: new Date(startStr).toISOString(),
+          adjustedStart: new Date(new Date(startStr).getTime() - 8 * 60 * 60 * 1000).toISOString(),
+          originalEnd: new Date(endStr).toISOString(),
+          adjustedEnd: new Date(new Date(endStr).getTime() - 8 * 60 * 60 * 1000).toISOString(),
+          note: "Subtracted 8 hours for Taiwan timezone compensation"
+        },
+        apiFormat: {
+          apiStart: toApiFormat(startStr),
+          apiEnd: toApiFormat(endStr)
+        },
+        timezoneInfo: {
+          offset: new Date().getTimezoneOffset(),
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+        }
+      });
 
       // Try to get Bearer token from session helper endpoint
       let authHeader = {};
@@ -2031,16 +2317,41 @@ function saveAuthToken(token) {
       const sd = toDate(startStr);
       const ed = toDate(endStr);
       if (!(sd instanceof Date) || isNaN(sd) || !(ed instanceof Date) || isNaN(ed)) {
-        errEl.textContent = 'INVALID_DATETIME';
+        errEl.textContent = '傳入的時間格式錯誤，或是日期時間不符合標準';
         return;
       }
       if (ed <= sd) {
-        errEl.textContent = 'END_BEFORE_START';
+        errEl.textContent = '預約結束時間必須晚於開始時間';
+        errEl.style.display = 'block';
+        console.log('End time validation failed:', { start: startStr, end: endStr });
+        return;
+      }
+      
+      // Check minimum advance reservation time (15 minutes)
+      const now = new Date();
+      const minAdvanceTime = new Date(now.getTime() + 15 * 60000); // 15 minutes from now
+      if (sd < minAdvanceTime) {
+        errEl.textContent = '預約的開始時間早於現在時間（至少需要提前15分鐘預約）';
+        return;
+      }
+      
+      // Check bookable date range (14 days from today)
+      const maxBookableDate = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000); // 14 days from now
+      if (sd > maxBookableDate) {
+        errEl.textContent = '超出可預約的日期範圍（只能預約今天起14天內的時間）';
         return;
       }
       const minutesBetween = Math.round((ed - sd) / 60000);
       if (minutesBetween < 30 || minutesBetween > 240) {
-        errEl.textContent = 'DURATION_OUT_OF_RANGE';
+        errEl.textContent = '預約的時長不符合規則（小於30分鐘或大於4小時）';
+        return;
+      }
+      
+      // Check time slot granularity (15-minute intervals)
+      const startMinutes = sd.getMinutes();
+      const endMinutes = ed.getMinutes();
+      if (startMinutes % 15 !== 0 || endMinutes % 15 !== 0) {
+        errEl.textContent = '預約的時間沒有對齊時間粒度（只能選00、15、30、45分）';
         return;
       }
 
@@ -2058,6 +2369,14 @@ function saveAuthToken(token) {
           }
         } catch (_) { /* ignore */ }
 
+        const requestBody = {
+          pile_id: pileId,
+          start_time: toApiFormat(startStr),
+          end_time: toApiFormat(endStr)
+        };
+        
+        console.log('Sending reservation request:', requestBody);
+        
         const resp = await fetch('/reservations', {
           method: 'POST',
           headers: Object.assign({
@@ -2067,32 +2386,76 @@ function saveAuthToken(token) {
             'Idempotency-Key': uuidv4()
           }, authHeader),
           credentials: 'include',
-          body: JSON.stringify({
-            pile_id: pileId,
-            start_time: toIsoZ(startStr),
-            end_time: toIsoZ(endStr)
-          })
+          body: JSON.stringify(requestBody)
         });
+        
+        console.log('Response status:', resp.status);
+        console.log('Response headers:', resp.headers);
+        
         let json = await safeJsonResponse(resp) || {};
+        console.log('Response JSON:', json);
+        
+        // Debug response times
+        if (json.data) {
+          console.log('Backend response times:', {
+            backendStart: json.data.start_time,
+            backendEnd: json.data.end_time,
+            userSelectedStart: startStr,
+            userSelectedEnd: endStr,
+            timeDifference: {
+              startDiff: json.data.start_time ? 
+                (new Date(json.data.start_time) - new Date(startStr)) / (1000 * 60 * 60) + ' hours' : 'N/A',
+              endDiff: json.data.end_time ? 
+                (new Date(json.data.end_time) - new Date(endStr)) / (1000 * 60 * 60) + ' hours' : 'N/A'
+            }
+          });
+        }
+        
         if (!resp.ok || json.success === false) {
           let msg = json.message || `預約失敗 (HTTP ${resp.status})`;
+          
+          // Check API response structure according to documentation
+          console.log('API Response structure:', {
+            success: json.success,
+            code: json.code,
+            message: json.message,
+            hasData: !!json.data,
+            dataKeys: json.data ? Object.keys(json.data) : []
+          });
+          
           // Map backend codes to UI
-          if (json?.data?.error_code === 'OVERLAPPED_WITH_OTHERS') msg = '你選擇的時段已被預約';
+          if (json?.data?.error_code === 'INVALID_DATETIME') msg = '傳入的時間格式錯誤，或是日期時間不符合標準';
+          if (json?.data?.error_code === 'START_IN_PAST') msg = '預約的開始時間早於現在時間';
+          if (json?.data?.error_code === 'END_BEFORE_START') msg = '預約結束時間比開始時間還早';
+          if (json?.data?.error_code === 'OUT_OF_BOOKABLE_RANGE') msg = '超出可預約的日期範圍（預設是今天起14天內）';
+          if (json?.data?.error_code === 'NOT_MATCH_SLOT_GRANULARITY') msg = '預約的時間沒有對齊時間粒度（只能選00、15、30、45分）';
+          if (json?.data?.error_code === 'DURATION_OUT_OF_RANGE') msg = '預約的時長不符合規則（小於30分鐘或大於4小時）';
+          if (json?.data?.error_code === 'CROSS_DAY_NOT_ALLOWED') msg = '嘗試跨日預約，但系統設定不允許';
+          if (json?.data?.error_code === 'OVERLAPPED_WITH_OTHERS') msg = '預約時間和其他已存在的預約衝突';
           if (resp.status === 401) msg = '請先登入再預約';
           if (json?.data?.error_code === 'USER_ACTIVE') msg = '你已有一筆尚未結束的預約';
           if (resp.status === 409 && !json?.data?.error_code) msg = '該時段不可用或與其他預約衝突';
+          if (resp.status === 400) msg = '請求格式錯誤，請檢查輸入資料';
+          
           errEl.textContent = msg;
+          errEl.style.display = 'block';
+          console.log('Error message:', msg);
           return;
         }
         // success
+        console.log('Reservation successful!');
         // 提示：預約成功
         if (typeof showSuccess === 'function') {
           showSuccess('預約成功');
+        } else {
+          console.log('showSuccess function not found');
         }
         document.getElementById('reservation-backdrop').style.display = 'none';
         document.getElementById('reservation-modal').style.display = 'none';
       } catch (e) {
+        console.error('Reservation error:', e);
         errEl.textContent = '連線失敗，請稍後再試';
+        errEl.style.display = 'block';
       } finally {
         submitBtn.disabled = false;
       }
@@ -2130,8 +2493,8 @@ function saveAuthToken(token) {
         : (addr ? `https://www.google.com/maps?q=${encodeURIComponent(addr)}` : '');
 
       item.innerHTML = `
-        <div>開始：${(data.start_time || '').replace('T',' ')}</div>
-        <div>結束：${(data.end_time || '').replace('T',' ')}</div>
+        <div>開始：${formatDisplayTime(data.start_time)}</div>
+        <div>結束：${formatDisplayTime(data.end_time)}</div>
         <div>地點：${addr || '-'}
           ${gmap ? `<a href="${gmap}" target="_blank" rel="noopener" title="在 Google Maps 開啟" style="margin-left:6px; display:inline-flex; align-items:center;">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="#2563eb" aria-hidden="true">
@@ -2206,7 +2569,10 @@ function saveAuthToken(token) {
                   const j = await safeJsonResponse(r);
                   if (j && j.success) {
                     // 後端回傳 { success:true, code, message, data }，即使 data 為 null 也不會拋錯
-                    showSuccess && showSuccess('取消成功');
+                    // 根據預約狀態顯示不同的成功訊息
+                    const currentStatus = data.status || '';
+                    const successMessage = currentStatus === 'CANCELED' ? '取消預約' : '取消成功';
+                    showSuccess && showSuccess(successMessage);
                     const safeData = j?.data ?? {};
                     if (safeData.id) {
                       console.log('ID:', safeData.id);
@@ -2217,7 +2583,10 @@ function saveAuthToken(token) {
                     stopMyResvPolling();
                   } else if (r.ok && !j) {
                     // 例如 204 No Content 或非 JSON
-                    showSuccess && showSuccess('取消成功');
+                    // 根據預約狀態顯示不同的成功訊息
+                    const currentStatus = data.status || '';
+                    const successMessage = currentStatus === 'CANCELED' ? '取消預約' : '取消成功';
+                    showSuccess && showSuccess(successMessage);
                     // 關閉「我的預約」模態框
                     document.getElementById('myresv-backdrop').style.display = 'none';
                     document.getElementById('myresv-modal').style.display = 'none';
