@@ -2121,6 +2121,22 @@ function saveAuthToken(token) {
       return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
     }
     
+    // Helper function to manage error box visibility
+    function showReservationError(message) {
+      const errEl = document.getElementById('resv-error');
+      if (message) {
+        errEl.textContent = message;
+        errEl.style.display = 'block';
+      } else {
+        errEl.textContent = '';
+        errEl.style.display = 'none';
+      }
+    }
+    
+    function hideReservationError() {
+      showReservationError('');
+    }
+    
     // Format display time from UTC to local timezone
     function formatDisplayTime(timeString) {
       if (!timeString) return '-';
@@ -2196,7 +2212,7 @@ function saveAuthToken(token) {
           duration: Math.round((end - start) / 60000) + ' minutes'
         });
         
-        document.getElementById('resv-error').textContent = '';
+        hideReservationError();
 
         document.getElementById('reservation-backdrop').style.display = 'block';
         document.getElementById('reservation-modal').style.display = 'block';
@@ -2204,10 +2220,14 @@ function saveAuthToken(token) {
     });
 
     document.getElementById('resv-cancel').addEventListener('click', () => {
+      // Hide error box when closing modal
+      hideReservationError();
       document.getElementById('reservation-backdrop').style.display = 'none';
       document.getElementById('reservation-modal').style.display = 'none';
     });
     document.getElementById('reservation-backdrop').addEventListener('click', () => {
+      // Hide error box when closing modal
+      hideReservationError();
       document.getElementById('reservation-backdrop').style.display = 'none';
       document.getElementById('reservation-modal').style.display = 'none';
     });
@@ -2238,32 +2258,43 @@ function saveAuthToken(token) {
       const startStr = `${startDate}T${startHour}:${startMinute}`;
       const endStr = `${endDate}T${endHour}:${endMinute}`;
       const errEl = document.getElementById('resv-error');
-      errEl.textContent = '';
-      errEl.style.display = 'none';
+      hideReservationError();
 
       if (!pileId || !startStr || !endStr) {
-        errEl.textContent = '請完整填寫';
-        errEl.style.display = 'block';
+        showReservationError('請完整填寫');
         console.log('Form validation failed:', { pileId, startStr, endStr });
         return;
       }
 
-      // Convert local datetime to API format (subtract 8 hours for Taiwan timezone)
+      // Convert local datetime to API format (YYYY-MM-DD HH:mm:ss)
+      // Convert local datetime to API format (subtract 8 hours)
       const toApiFormat = (local) => {
-        const d = new Date(local);
-        // Subtract 8 hours to compensate for Taiwan timezone (UTC+8)
-        const adjustedTime = new Date(d.getTime() - 8 * 60 * 60 * 1000);
+        // Extract time components directly from the string to avoid timezone issues
+        const match = local.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})$/);
+        if (!match) {
+          console.error('Invalid time format:', local);
+          return local;
+        }
         
-        const pad = (n) => String(n).padStart(2, '0');
-        const year = adjustedTime.getFullYear();
-        const month = pad(adjustedTime.getMonth() + 1);
-        const day = pad(adjustedTime.getDate());
-        const hours = pad(adjustedTime.getHours());
-        const minutes = pad(adjustedTime.getMinutes());
-        const seconds = pad(adjustedTime.getSeconds());
+        const [, date, hour, minute] = match;
         
-        // Return in YYYY-MM-DDTHH:mm:ss format
-        return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+        // Subtract 8 hours from the hour
+        let adjustedHour = parseInt(hour) - 8;
+        let adjustedDate = date;
+        
+        // Handle day rollover if hour becomes negative
+        if (adjustedHour < 0) {
+          adjustedHour += 24;
+          const dateObj = new Date(date);
+          dateObj.setDate(dateObj.getDate() - 1);
+          adjustedDate = dateObj.toISOString().split('T')[0];
+        }
+        
+        // Format the adjusted hour with leading zero
+        const formattedHour = String(adjustedHour).padStart(2, '0');
+        
+        // Return in YYYY-MM-DDTHH:mm:ss format (with 8 hours subtracted)
+        return `${adjustedDate}T${formattedHour}:${minute}:00`;
       };
       
       console.log('Time conversion debug:', {
@@ -2283,12 +2314,13 @@ function saveAuthToken(token) {
           startDate: new Date(startStr),
           endDate: new Date(endStr)
         },
-        timezoneAdjustment: {
-          originalStart: new Date(startStr).toISOString(),
-          adjustedStart: new Date(new Date(startStr).getTime() - 8 * 60 * 60 * 1000).toISOString(),
-          originalEnd: new Date(endStr).toISOString(),
-          adjustedEnd: new Date(new Date(endStr).getTime() - 8 * 60 * 60 * 1000).toISOString(),
-          note: "Subtracted 8 hours for Taiwan timezone compensation"
+        timeFormat: {
+          userSelectedStart: startStr,
+          userSelectedEnd: endStr,
+          apiStart: toApiFormat(startStr),
+          apiEnd: toApiFormat(endStr),
+          timezoneHandling: "Subtract 8 hours from local time before sending",
+          note: "Frontend subtracts 8 hours to compensate for backend timezone handling"
         },
         apiFormat: {
           apiStart: toApiFormat(startStr),
@@ -2300,29 +2332,23 @@ function saveAuthToken(token) {
         }
       });
 
-      // Try to get Bearer token from session helper endpoint
-      let authHeader = {};
-      try {
-        const tokResp = await fetch('/auth/token', { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-        if (tokResp.ok) {
-          const tokJson = await tokResp.json();
-          if (tokJson?.success && tokJson?.token) {
-            authHeader['Authorization'] = 'Bearer ' + tokJson.token;
-          }
-        }
-      } catch (_) { /* ignore */ }
+      // Use getAuthHeaders() function (same as other API calls)
+      const authHeaders = getAuthHeaders();
+      if (!authHeaders['Authorization']) {
+        showReservationError('請先登入再預約');
+        return;
+      }
 
       // Local pre-checks per minimal rules
       const toDate = (s) => new Date(s);
       const sd = toDate(startStr);
       const ed = toDate(endStr);
       if (!(sd instanceof Date) || isNaN(sd) || !(ed instanceof Date) || isNaN(ed)) {
-        errEl.textContent = '傳入的時間格式錯誤，或是日期時間不符合標準';
+        showReservationError('傳入的時間格式錯誤，或是日期時間不符合標準');
         return;
       }
       if (ed <= sd) {
-        errEl.textContent = '預約結束時間必須晚於開始時間';
-        errEl.style.display = 'block';
+        showReservationError('預約結束時間必須晚於開始時間');
         console.log('End time validation failed:', { start: startStr, end: endStr });
         return;
       }
@@ -2331,19 +2357,19 @@ function saveAuthToken(token) {
       const now = new Date();
       const minAdvanceTime = new Date(now.getTime() + 15 * 60000); // 15 minutes from now
       if (sd < minAdvanceTime) {
-        errEl.textContent = '預約的開始時間早於現在時間（至少需要提前15分鐘預約）';
+        showReservationError('預約的開始時間早於現在時間（至少需要提前15分鐘預約）');
         return;
       }
       
       // Check bookable date range (14 days from today)
       const maxBookableDate = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000); // 14 days from now
       if (sd > maxBookableDate) {
-        errEl.textContent = '超出可預約的日期範圍（只能預約今天起14天內的時間）';
+        showReservationError('超出可預約的日期範圍（只能預約今天起14天內的時間）');
         return;
       }
       const minutesBetween = Math.round((ed - sd) / 60000);
       if (minutesBetween < 30 || minutesBetween > 240) {
-        errEl.textContent = '預約的時長不符合規則（小於30分鐘或大於4小時）';
+        showReservationError('預約的時長不符合規則（小於30分鐘或大於4小時）');
         return;
       }
       
@@ -2351,7 +2377,7 @@ function saveAuthToken(token) {
       const startMinutes = sd.getMinutes();
       const endMinutes = ed.getMinutes();
       if (startMinutes % 15 !== 0 || endMinutes % 15 !== 0) {
-        errEl.textContent = '預約的時間沒有對齊時間粒度（只能選00、15、30、45分）';
+        showReservationError('預約的時間沒有對齊時間粒度（只能選00、15、30、45分）');
         return;
       }
 
@@ -2360,14 +2386,31 @@ function saveAuthToken(token) {
       try {
         // Guard: ensure no active reservation (use /reservations/top)
         try {
-          const chk = await fetch('/reservations/top', { method: 'GET', headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'include' });
+          const chk = await fetch('/reservations/top', { 
+            method: 'GET', 
+            headers: getAuthHeaders(),
+            credentials: 'include' 
+          });
           const chkJson = await safeJsonResponse(chk);
-          if (chk.ok && chkJson && chkJson.success && chkJson.data && chkJson.data.status && chkJson.data.status !== 'CANCELLED' && chkJson.data.status !== 'CANCELED') {
-            errEl.textContent = '你目前已有生效預約，請先取消或更改時段';
-            submitBtn.disabled = false;
-            return;
+          
+          console.log('Current reservation check:', {
+            status: chk.status,
+            data: chkJson,
+            hasActiveReservation: chkJson?.data?.status
+          });
+          
+          if (chk.ok && chkJson && chkJson.success && chkJson.data && chkJson.data.status) {
+            const status = chkJson.data.status;
+            // Check for active reservation states
+            if (status === 'RESERVED' || status === 'CHARGING') {
+              showReservationError('您已預約，如需新的預約請先取消');
+              submitBtn.disabled = false;
+              return;
+            }
           }
-        } catch (_) { /* ignore */ }
+        } catch (error) {
+          console.warn('Reservation check failed:', error);
+        }
 
         const requestBody = {
           pile_id: pileId,
@@ -2376,15 +2419,19 @@ function saveAuthToken(token) {
         };
         
         console.log('Sending reservation request:', requestBody);
+        console.log('API endpoint: /reservations');
+        console.log('Request headers:', Object.assign({
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': csrfToken,
+          'X-Requested-With': 'XMLHttpRequest',
+          'Idempotency-Key': uuidv4()
+        }, authHeaders));
         
         const resp = await fetch('/reservations', {
           method: 'POST',
           headers: Object.assign({
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': csrfToken,
-            'X-Requested-With': 'XMLHttpRequest',
             'Idempotency-Key': uuidv4()
-          }, authHeader),
+          }, authHeaders),
           credentials: 'include',
           body: JSON.stringify(requestBody)
         });
@@ -2423,22 +2470,24 @@ function saveAuthToken(token) {
             dataKeys: json.data ? Object.keys(json.data) : []
           });
           
-          // Map backend codes to UI
-          if (json?.data?.error_code === 'INVALID_DATETIME') msg = '傳入的時間格式錯誤，或是日期時間不符合標準';
-          if (json?.data?.error_code === 'START_IN_PAST') msg = '預約的開始時間早於現在時間';
-          if (json?.data?.error_code === 'END_BEFORE_START') msg = '預約結束時間比開始時間還早';
-          if (json?.data?.error_code === 'OUT_OF_BOOKABLE_RANGE') msg = '超出可預約的日期範圍（預設是今天起14天內）';
-          if (json?.data?.error_code === 'NOT_MATCH_SLOT_GRANULARITY') msg = '預約的時間沒有對齊時間粒度（只能選00、15、30、45分）';
-          if (json?.data?.error_code === 'DURATION_OUT_OF_RANGE') msg = '預約的時長不符合規則（小於30分鐘或大於4小時）';
-          if (json?.data?.error_code === 'CROSS_DAY_NOT_ALLOWED') msg = '嘗試跨日預約，但系統設定不允許';
-          if (json?.data?.error_code === 'OVERLAPPED_WITH_OTHERS') msg = '預約時間和其他已存在的預約衝突';
-          if (resp.status === 401) msg = '請先登入再預約';
-          if (json?.data?.error_code === 'USER_ACTIVE') msg = '你已有一筆尚未結束的預約';
-          if (resp.status === 409 && !json?.data?.error_code) msg = '該時段不可用或與其他預約衝突';
+          // Map backend codes to UI (based on Swagger API documentation)
           if (resp.status === 400) msg = '請求格式錯誤，請檢查輸入資料';
+          if (resp.status === 401) msg = '請先登入再預約';
+          if (resp.status === 409) msg = '該時段不可用或與其他預約衝突';
+          if (resp.status === 500) msg = '伺服器內部錯誤，請稍後再試';
           
-          errEl.textContent = msg;
-          errEl.style.display = 'block';
+          // Handle specific error codes from API response
+          if (json?.code === 40001) msg = '傳入的時間格式錯誤，或是日期時間不符合標準';
+          if (json?.code === 40002) msg = '預約的開始時間早於現在時間';
+          if (json?.code === 40003) msg = '預約結束時間比開始時間還早';
+          if (json?.code === 40004) msg = '超出可預約的日期範圍（預設是今天起14天內）';
+          if (json?.code === 40005) msg = '預約的時間沒有對齊時間粒度（只能選00、15、30、45分）';
+          if (json?.code === 40006) msg = '預約的時長不符合規則（小於30分鐘或大於4小時）';
+          if (json?.code === 40007) msg = '嘗試跨日預約，但系統設定不允許';
+          if (json?.code === 40008) msg = '預約時間和其他已存在的預約衝突';
+          if (json?.code === 40009) msg = '您已預約，如需新的預約請先取消';
+          
+          showReservationError(msg);
           console.log('Error message:', msg);
           return;
         }
@@ -2454,8 +2503,7 @@ function saveAuthToken(token) {
         document.getElementById('reservation-modal').style.display = 'none';
       } catch (e) {
         console.error('Reservation error:', e);
-        errEl.textContent = '連線失敗，請稍後再試';
-        errEl.style.display = 'block';
+        showReservationError('連線失敗，請稍後再試');
       } finally {
         submitBtn.disabled = false;
       }
