@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>登入</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="min-h-screen bg-gray-50 flex items-center justify-center">
   <!-- 右上角註冊按鈕 -->
@@ -42,6 +42,18 @@
       </div>
     @endif
 
+    {{-- 成功訊息（註冊成功等） --}}
+    @if (session('success'))
+      <div class="mt-4 rounded-lg border border-green-200 bg-green-50 text-green-700 p-3 text-sm">
+        <div class="flex items-center">
+          <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+          </svg>
+          {{ session('success') }}
+        </div>
+      </div>
+    @endif
+
     <form id="loginForm" class="mt-6 space-y-4" novalidate>
       @csrf
 
@@ -63,13 +75,96 @@
         登入
       </button>
     </form>
+
+    <!-- 錯誤訊息顯示區域 -->
+    <div id="login-error" class="mt-4 hidden">
+      <div class="rounded-lg border border-red-200 bg-red-50 text-red-700 p-3 text-sm">
+        <span id="error-message"></span>
+      </div>
+    </div>
+
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('loginForm');
+        const errorDiv = document.getElementById('login-error');
+        const errorMessage = document.getElementById('error-message');
+        
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const account = document.getElementById('account').value.trim();
+            const password = document.getElementById('password').value.trim();
+            
+            // 隱藏之前的錯誤訊息
+            errorDiv.classList.add('hidden');
+            
+            if (!account || !password) {
+                showError('請填寫帳號和密碼');
+                return;
+            }
+            
+            try {
+                console.log('登入嘗試:', account);
+                
+                // 使用外部認證控制器登入路由
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                const headers = {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                };
+                
+                if (csrfToken) {
+                    headers['X-CSRF-TOKEN'] = csrfToken;
+                }
+                
+                const response = await fetch('{{ route("auth.login") }}', {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({
+                        account: account,
+                        password: password
+                    })
+                });
+                
+                const data = await response.json().catch(() => ({}));
+                console.log('登入 API 回應:', data);
+                
+                if (response.ok && data.success === true) {
+                    // 登入成功，重定向到地圖頁面
+                    console.log('登入成功，重定向到 /map');
+                    window.location.href = '/map';
+                } else {
+                    // 登入失敗，顯示錯誤訊息
+                    const errorMsg = data.message || '登入失敗，請檢查帳號密碼';
+                    showError(errorMsg);
+                }
+                
+            } catch (error) {
+                console.error('登入錯誤:', error);
+                showError('網路錯誤，請稍後再試');
+            }
+        });
+        
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorDiv.classList.remove('hidden');
+        }
+    });
+    </script>
     
-    <!-- 登入框底部的註冊連結 -->
-    <div class="mt-6 text-center">
+    <!-- 登入框底部的連結 -->
+    <div class="mt-6 text-center space-y-2">
       <p class="text-sm text-gray-600">
         還沒有帳號？
         <a href="{{ route('register') }}" class="text-indigo-600 hover:text-indigo-700 font-medium">
           立即註冊
+        </a>
+      </p>
+      <p class="text-sm text-gray-600">
+        忘記密碼？
+        <a href="{{ route('password.request') }}" class="text-indigo-600 hover:text-indigo-700 font-medium">
+          重設密碼
         </a>
       </p>
     </div>

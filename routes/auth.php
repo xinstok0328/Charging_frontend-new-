@@ -31,23 +31,23 @@ Route::middleware('guest')->group(function () {
     Route::get('/register', [RegisteredUserController::class, 'create'])->name('register');
     Route::post('/register', [RegisteredUserController::class, 'store']);
 
-    // 密碼重設
-    Route::get('/forgot-password', [PasswordResetLinkController::class, 'create'])->name('password.request');
-    Route::post('/forgot-password', [PasswordResetLinkController::class, 'store'])->name('password.email');
-    Route::get('/reset-password/{token}', [NewPasswordController::class, 'create'])->name('password.reset');
+    // 忘記密碼相關路由
+    Route::get('/forgot-password', function () {
+        return view('auth.forgot-password');
+    })->name('password.request');
     Route::post('/reset-password', [NewPasswordController::class, 'store'])->name('password.store');
 
     // 首頁
     Route::get('/', function () { return view('welcome'); });
 
-    // 地圖相關路由
-    Route::get('/map', [MapController::class, 'index'])->name('map.index');
+    // 地圖相關路由 - 移到認證區域
+    // Route::get('/map', [MapController::class, 'index'])->name('map.index');
     
     // 原有的路由保持不變
-    Route::get('/map/markers', [MapController::class, 'markers'])->name('map.markers');
+    // Route::get('/map/markers', [MapController::class, 'markers'])->name('map.markers');
     
     // 新增 - 對齊前端代碼的API端點
-    Route::get('/index', [MapController::class, 'getStations'])->name('map.stations');
+    // Route::get('/index', [MapController::class, 'getStations'])->name('map.stations');
 
     // 驗證狀態檢查
     Route::get('/auth/status', [ExternalAuthController::class, 'checkAuthStatus'])->name('auth.status');
@@ -55,6 +55,20 @@ Route::middleware('guest')->group(function () {
     // 測試頁面
     Route::get('/test-auth', function () { return view('test-auth'); });
     Route::get('/test-login', function () { return view('test-login'); });
+    
+    // 檢查 email 是否已註冊
+    Route::get('/check-email/{email}', function ($email) {
+        $user = App\Models\User::where('email', $email)->first();
+        return response()->json([
+            'email' => $email,
+            'exists' => $user ? true : false,
+            'user' => $user ? [
+                'id' => $user->id,
+                'name' => $user->name,
+                'created_at' => $user->created_at
+            ] : null
+        ]);
+    })->name('check.email');
 
     Route::get('/user/info', [ExternalAuthController::class, 'userInfo'])->name('user.info');
 
@@ -86,13 +100,19 @@ Route::middleware('custom.auth')->group(function () {
     
     Route::get('/info', function () { return view('info'); });
     
-    // Dashboard
+    // Dashboard (rely on custom.auth only to avoid redirect loops)
     Route::get('/dashboard', function () {
         return view('dashboard');
-    })->middleware(['auth', 'verified'])->name('dashboard');
+    })->name('dashboard');
+
+    // 地圖相關路由 - 需要認證
+    Route::get('/map', [MapController::class, 'index'])->name('map.index');
+    Route::get('/map/markers', [MapController::class, 'markers'])->name('map.markers');
+    Route::get('/index', [MapController::class, 'getStations'])->name('map.stations');
 
     // 用戶資訊
     Route::get('/user/info', [ExternalAuthController::class, 'userInfo'])->name('user.info');
+    
     
     // 更新密碼
     Route::post('/user/update_pwd', [ExternalAuthController::class, 'updatePassword'])->name('user.update_pwd');
@@ -142,7 +162,9 @@ Route::middleware('custom.auth')->group(function () {
             'has_token' => !empty(Session::get('auth_token')),
             'user_account' => Session::get('user_account'),
             'session_id' => Session::getId(),
-            'timestamp' => now()->toISOString()
+            'timestamp' => now()->toISOString(),
+            'session_driver' => config('session.driver'),
+            'all_session_data' => Session::all()
         ]);
     });
 

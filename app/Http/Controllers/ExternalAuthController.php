@@ -32,6 +32,7 @@ class ExternalAuthController extends Controller
             'password' => ['required', 'string'],
         ]);
 
+        // 直接使用外部 API 進行登入
         $base = config('services.backend.base_url', env('BACKEND_BASE_URL', 'http://120.110.115.126:18081'));
         $endpoint = rtrim($base, '/') . '/auth/login';
 

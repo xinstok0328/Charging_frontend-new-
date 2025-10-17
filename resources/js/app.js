@@ -21,6 +21,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 不是註冊頁就略過（避免其它頁報錯）
   if (!form || !emailInput || !msgBox) return;
+  
+  // 檢查是否已經有內聯腳本處理驗證碼功能（避免重複綁定事件）
+  if (getCodeBtn && getCodeBtn.onclick !== null) return;
 
   // 工具：Email 格式檢查 + 提示訊息 + 倒數計時
   const isEmail = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
