@@ -49,21 +49,14 @@ class StoreReservationRequest extends FormRequest
                 return;
             }
 
-            // Advance requirement: at least 15 minutes in the future
+            // Advance requirement: removed 15-minute restriction, only check if not in the past
             $nowTz = now()->setTimezone($start->timezone)->second(0);
-            $advance = (int) config('app.reservation_advance_minutes', 15);
-            if ($start->lt($nowTz->copy()->addMinutes($advance))) {
+            if ($start->lt($nowTz)) {
                 $v->errors()->add('start_time', 'START_IN_PAST');
             }
 
-            // Step alignment: 15 minutes
-            $step = (int) config('app.reservation_step_minutes', 15);
-            $aligned = function (Carbon $t, int $step): bool {
-                return $t->minute % $step === 0 && (int) $t->second === 0;
-            };
-            if (!$aligned($start, $step) || !$aligned($end, $step)) {
-                $v->errors()->add('start_time', 'NOT_MATCH_SLOT_GRANULARITY');
-            }
+            // Step alignment: removed 15-minute restriction, allow any minute
+            // No granularity check needed anymore
 
             // Duration bounds: 30 to 240 minutes
             $min = (int) config('app.reservation_min_minutes', 30);
