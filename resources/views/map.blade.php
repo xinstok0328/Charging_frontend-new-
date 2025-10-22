@@ -2501,6 +2501,44 @@ function saveAuthToken(token) {
         }
         document.getElementById('reservation-backdrop').style.display = 'none';
         document.getElementById('reservation-modal').style.display = 'none';
+
+        // 直接在本頁等待至預約開始時間，然後跳轉到充電動畫頁
+        try {
+          const reservation = {
+            id: (json && (json.id || (json.data && (json.data.id || json.data.reservationId)))) || Date.now(),
+            pile_id: pileId,
+            start_time: toIsoZ(startStr),
+            end_time: toIsoZ(endStr),
+            status: 'confirmed'
+          };
+          localStorage.setItem('activeReservation', JSON.stringify(reservation));
+
+          const startMs = new Date(reservation.start_time).getTime();
+          const nowMs = Date.now();
+          const delay = Math.max(0, startMs - nowMs);
+
+          // 可選：顯示簡短提示（不影響原本畫面）
+          try {
+            const tip = document.createElement('div');
+            tip.textContent = '預約已確認，將於預約時間自動開始充電...';
+            tip.style.position = 'fixed';
+            tip.style.bottom = '16px';
+            tip.style.right = '16px';
+            tip.style.padding = '10px 12px';
+            tip.style.background = 'rgba(43, 122, 11, 0.9)';
+            tip.style.color = '#fff';
+            tip.style.borderRadius = '6px';
+            tip.style.zIndex = '2000';
+            document.body.appendChild(tip);
+            setTimeout(() => { try { document.body.removeChild(tip); } catch(_){} }, 4000);
+          } catch(_) {}
+
+          setTimeout(() => {
+            window.location.href = '/charging-animation?id=' + reservation.id;
+          }, delay);
+        } catch (_) {
+          // 若寫入失敗，至少不阻擋原本流程
+        }
       } catch (e) {
         console.error('Reservation error:', e);
         showReservationError('連線失敗，請稍後再試');

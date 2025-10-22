@@ -133,6 +133,22 @@ Route::middleware('custom.auth')->group(function () {
     // Reservations - 使用自訂驗證（Session token）
     Route::post('/reservations', [ReservationController::class, 'store'])->name('reservations.store');
 
+    // Start charging session -> proxy to external /user/purchase/start
+    Route::post('/user/purchase/start', [ReservationController::class, 'start'])->name('user.purchase.start');
+
+    Route::get('/reservation-waiting', function () { return view('reservation-waiting');
+    })->name('reservation.waiting');
+
+Route::get('/charging-animation', function () { 
+    return view('charging-animation'); 
+})->name('charging.animation');
+
+Route::get('/charging-service', function () { 
+    return view('charging-service'); // 你的實際充電服務頁面
+})->name('charging.service');
+
+
+
     // 如果你想要在登入後也能訪問地圖API（可選）
     // Route::get('/map/stations', [MapController::class, 'getStations'])->name('map.stations.auth');
 
@@ -156,6 +172,36 @@ Route::middleware('custom.auth')->group(function () {
         ]);
     });
 
+    // 支援 POST 的 debug 路由
+    Route::post('/debug/session', function() {
+        return response()->json([
+            'method' => 'POST',
+            'session_driver' => config('session.driver'),
+            'session_id' => Session::getId(),
+            'session_started' => Session::isStarted(),
+            'user_authenticated' => Session::get('user_authenticated'),
+            'has_auth_token' => !empty(Session::get('auth_token')),
+            'auth_token_length' => Session::get('auth_token') ? strlen(Session::get('auth_token')) : 0,
+            'user_data' => Session::get('user_data'),
+            'all_session_keys' => array_keys(Session::all()),
+            'session_file_path' => storage_path('framework/sessions'),
+            'session_lifetime' => config('session.lifetime'),
+            'request_data' => request()->all(),
+        ]);
+    });
+
+    // 專門用於測試 POST 請求的路由
+    Route::post('/debug/post-test', function() {
+        return response()->json([
+            'success' => true,
+            'message' => 'POST 請求成功',
+            'method' => request()->method(),
+            'received_data' => request()->all(),
+            'headers' => request()->headers->all(),
+            'timestamp' => now()->toISOString()
+        ]);
+    });
+
     Route::get('/debug/auth-status', function() {
         return response()->json([
             'authenticated' => Session::get('user_authenticated', false),
@@ -167,6 +213,21 @@ Route::middleware('custom.auth')->group(function () {
             'all_session_data' => Session::all()
         ]);
     });
+
+    // 測試充電 API 頁面
+    Route::get('/test-charging-api', function () { 
+        return view('test-charging-api'); 
+    })->name('test.charging.api');
+
+    // 測試預約資料頁面
+    Route::get('/test-reservation', function () { 
+        return view('test-reservation'); 
+    })->name('test.reservation');
+
+    // API 除錯頁面
+    Route::get('/debug-api', function () { 
+        return view('debug-api'); 
+    })->name('debug.api');
 
    
 

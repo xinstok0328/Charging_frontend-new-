@@ -7,6 +7,7 @@ use App\Models\Reservation;
 use Illuminate\Contracts\Database\Query\Expression;
 use Illuminate\Database\Query\Exception as QueryException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -14,6 +15,77 @@ use Illuminate\Support\Facades\Session;
 
 class ReservationController extends Controller
 {
+    public function start(Request $request): JsonResponse
+{
+    Log::info('充電啟動請求開始');
+    
+    $token = Session::get('auth_token');
+    if (!$token) {
+        Log::warning('充電啟動失敗：無認證 token');
+        return response()->json(['success' => false, 'message' => 'unauthenticated'], 401);
+    }
+
+    $base = config('services.backend.base_url', env('BACKEND_BASE_URL', 'http://120.110.115.126:18081'));
+    $endpoint = rtrim($base, '/') . '/user/purchase/start';
+    
+    // ✅ 方案 1：空 payload（依賴 token 自動查找預約）
+    $payload = [];
+    
+    Log::info('準備呼叫外部 API', [
+        'endpoint' => $endpoint,
+        'token_length' => strlen($token),
+        'payload' => $payload
+    ]);
+
+    try {
+        $resp = \Illuminate\Support\Facades\Http::timeout(20)
+            ->withHeaders([
+                'Accept' => 'application/json',
+                'Content-Type' => 'application/json',
+                'Authorization' => 'Bearer ' . $token,
+            ])->post($endpoint, $payload);
+
+        Log::info('外部 API 回應', [
+            'status' => $resp->status(),
+            'successful' => $resp->successful(),
+            'body' => $resp->body()
+        ]);
+
+        $status = $resp->status();
+        $json = null;
+        try { 
+            $json = $resp->json(); 
+            Log::info('解析 JSON 回應', ['json' => $json]);
+        } catch (\Throwable $e) {
+            Log::warning('無法解析 JSON 回應', ['error' => $e->getMessage()]);
+        }
+        
+        if ($json === null) {
+            $json = [
+                'success' => $resp->successful(),
+                'code' => $status,
+                'message' => $resp->successful() ? 'ok' : 'error',
+                'data' => null,
+            ];
+        }
+        
+        return response()->json($json, $status);
+        
+    } catch (\Throwable $e) {
+        Log::error('呼叫外部 API 異常', [
+            'error' => $e->getMessage(),
+            'endpoint' => $endpoint
+        ]);
+        
+        return response()->json([
+            'success' => false,
+            'code' => 500,
+            'message' => 'server_error',
+            'data' => null,
+        ], 500);
+    }
+}
+
     public function top(): JsonResponse
     {
         $token = Session::get('auth_token');
