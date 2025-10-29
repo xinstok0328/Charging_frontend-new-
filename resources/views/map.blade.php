@@ -236,6 +236,26 @@
       background-color: #5a2a87;
     }
 
+    .btn-list {
+      background-color: #28a745;
+      color: white;
+    }
+    
+  .btn-list:hover {
+    background-color: #218838;
+    color: white;
+  }
+
+  /* 預約列表項目樣式 */
+  #resvlist-list > div:hover {
+    background: #e2e8f0 !important;
+    border-color: #667eea !important;
+  }
+  
+  #resvlist-list > div[data-expanded="true"] {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+
     /* 充電站控制區域 */
     .station-controls {
       background: #f8f9fa;
@@ -675,6 +695,9 @@
       <button onclick="showRateInfo()" class="control-btn btn-rate-info">
         費率資訊
       </button>
+      <button onclick="viewUnpaidOrderFromStorage()" class="control-btn" style="background-color: #dc3545; color: white;">
+        查看未付款訂單
+      </button>
       <button onclick="showUserInfo()" class="control-btn btn-user-info">
         用戶資料
       </button>
@@ -686,6 +709,9 @@
       </button>
       <button onclick="openMyReservations()" class="control-btn btn-register">
         查看我的預約
+      </button>
+      <button onclick="openReservationList()" class="control-btn btn-list">
+        預約列表
       </button>
       <!-- </button>
       <button onclick="showRegister()" class="control-btn btn-register">
@@ -861,6 +887,59 @@
     </div>
   </div>
 
+    <!-- Reservation List Modal -->
+    <div id="resvlist-backdrop" class="reservation-modal-backdrop" style="position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: none; z-index: 1004;"></div>
+    <div id="resvlist-modal" class="reservation-modal" role="dialog" aria-modal="true" style="position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); background: #fff; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); width: 900px; max-width: calc(100% - 32px); height: 85vh; max-height: 85vh; display: none; flex-direction: column; overflow: hidden; z-index: 1005;">
+      <header style="padding:14px 16px;border-bottom:1px solid #eee;font-weight:bold;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+        <span>預約列表</span>
+        <button id="resvlist-close" class="btn btn-secondary" style="padding:4px 8px;border:none;border-radius:6px;">關閉</button>
+      </header>
+      
+      <!-- 篩選區域 -->
+      <div style="padding:16px;border-bottom:1px solid #eee;background:#f8f9fa;flex-shrink:0;">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px;">
+          <div>
+            <label style="display:block;font-size:12px;color:#4a5568;margin-bottom:4px;">狀態</label>
+            <select id="filter-status" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+              <option value="">全部</option>
+              <option value="RESERVED">已預約</option>
+              <option value="IN_PROGRESS">進行中</option>
+              <option value="COMPLETED">已完成</option>
+              <option value="CANCELED">已取消</option>
+            </select>
+          </div>
+          <div>
+            <label style="display:block;font-size:12px;color:#4a5568;margin-bottom:4px;">開始時間</label>
+            <input type="datetime-local" id="filter-start-time" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;" />
+          </div>
+          <div>
+            <label style="display:block;font-size:12px;color:#4a5568;margin-bottom:4px;">結束時間</label>
+            <input type="datetime-local" id="filter-end-time" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;" />
+          </div>
+          <div>
+            <label style="display:block;font-size:12px;color:#4a5568;margin-bottom:4px;">每頁顯示</label>
+            <select id="filter-limit" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+              <option value="10" selected>10 筆</option>
+              <option value="20">20 筆</option>
+              <option value="50">50 筆</option>
+              <option value="100">100 筆</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+          <button id="btn-filter-apply" style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;">套用篩選</button>
+          <button id="btn-filter-reset" style="background:#e2e8f0;color:#2d3748;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;">重設</button>
+        </div>
+      </div>
+      
+      <div style="flex:1;overflow-y:auto;">
+        <div id="resvlist-list" style="display:flex;flex-direction:column;gap:10px;padding:16px;"></div>
+        <div id="resvlist-error" style="color:#d63031;font-size:12px;min-height:16px;margin:0 16px;"></div>
+      </div>
+      
+      <div id="resvlist-pagination" style="padding:16px;border-top:1px solid #eee;display:flex;justify-content:center;align-items:center;gap:10px;background:#f8f9fa;flex-shrink:0;"></div>
+    </div>
+
   <!-- 狀態列 -->
   <div class="status-bar">
     <div>
@@ -1013,31 +1092,71 @@
     let chargingSession = null;
     let startTime = null;
     
-    // 頁面載入時從 localStorage 恢復充電會話
-    function restoreChargingSession() {
-      const storedSessionId = localStorage.getItem('charging_session_id');
-      if (storedSessionId) {
-        console.log('🔄 從 localStorage 恢復充電會話:', storedSessionId);
+    // 頁面載入時從後端 API 恢復充電會話（使用 session 中的 session_id）
+    async function restoreChargingSession() {
+      try {
+        console.log('🔄 嘗試從後端恢復充電會話（從 session 獲取 session_id）');
         
-        // 創建基本的 chargingSession 物件
-        chargingSession = {
-          session_id: storedSessionId,
-          start_time: localStorage.getItem('charging_start_time') || new Date().toISOString(),
-          price_per_hour: parseInt(localStorage.getItem('charging_price_per_hour')) || 100
-        };
+        // 調用本地 statusIng API，後端會從 session 獲取 session_id
+        const response = await fetch('/user/purchase/statusIng', {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+          }
+        });
         
-        // 恢復開始時間
-        const storedStartTime = localStorage.getItem('charging_start_time');
-        if (storedStartTime) {
-          startTime = new Date(storedStartTime);
+        if (response.ok) {
+          const result = await response.json();
+          console.log('📥 後端充電狀態回應:', result);
+          
+          if (result && result.success && result.data) {
+            chargingSession = result.data;
+            
+            if (chargingSession.start_time) {
+              startTime = new Date(chargingSession.start_time);
+            }
+            
+            // ✅ 從 /user/purchase/top API 獲取預計結束時間
+            console.log('📥 從 /user/purchase/top 獲取預計結束時間...');
+            const authToken = localStorage.getItem('auth_token');
+            try {
+              const topResponse = await fetch('http://120.110.115.126:18081/user/purchase/top', {
+                method: 'GET',
+                headers: {
+                  'Accept': 'application/json',
+                  'Authorization': `Bearer ${authToken}`
+                },
+                mode: 'cors'
+              });
+              
+              if (topResponse.ok) {
+                const topResult = await topResponse.json();
+                console.log('📥 /user/purchase/top 回應:', topResult);
+                
+                if (topResult && topResult.success && topResult.data && topResult.data.end_time) {
+                  chargingSession.end_time = topResult.data.end_time;
+                  console.log('✅ 已設定預計結束時間:', chargingSession.end_time);
+                }
+              }
+            } catch (err) {
+              console.warn('⚠️ 無法從 /user/purchase/top 獲取預計結束時間:', err);
+            }
+            
+            console.log('✅ 充電會話已從後端恢復:', chargingSession);
+            console.log('⏰ 開始時間已恢復:', startTime);
+            
+            return true;
+          }
         }
         
-        console.log('✅ 充電會話已恢復:', chargingSession);
-        console.log('⏰ 開始時間已恢復:', startTime);
-        
-        return true;
+        console.log('ℹ️ 無可恢復的充電會話');
+        return false;
+      } catch (error) {
+        console.warn('⚠️ 恢復充電會話失敗:', error);
+        return false;
       }
-      return false;
     }
     
     // 清除充電會話（只在完成時調用）
@@ -1045,9 +1164,11 @@
       console.log('🗑️ 清除充電會話數據...');
       chargingSession = null;
       startTime = null;
-      localStorage.removeItem('charging_session_id');
-      localStorage.removeItem('charging_start_time');
-      localStorage.removeItem('charging_price_per_hour');
+      // session_id 由後端 session 管理，不再需要清除 localStorage
+      const sEl = document.getElementById('sessionId');
+      if (sEl) sEl.textContent = '-';
+      const billEl = document.getElementById('chargingBillId');
+      if (billEl) billEl.textContent = '-';
       console.log('✅ 充電會話數據已清除');
     }
     
@@ -1100,6 +1221,13 @@
       const sessionIdEl = document.getElementById('sessionId');
       if (sessionIdEl) {
         console.log('🖥️ 充電畫面中顯示的會話ID:', sessionIdEl.textContent);
+      }
+
+      // 更新帳單ID（若有）
+      const billEl = document.getElementById('chargingBillId');
+      if (billEl) {
+        const billIdToShow = chargingSession.charging_bill_id;
+        billEl.textContent = billIdToShow || '-';
       }
       
       return {
@@ -1255,7 +1383,7 @@
           // 檢查預約狀態
           console.log('📊 預約狀態:', data.status);
           
-          if (data.status === 'COMPLETED' || data.status === 'CANCELLED') {
+          if (data.status === 'COMPLETED' || data.status === 'CANCELED' || data.status === 'CANCELLED') {
             console.log('⚠️ 預約已完成或已取消，無法查看充電狀態');
             if (errorElement) {
               errorElement.textContent = '預約已完成或已取消，無法查看充電狀態';
@@ -1562,90 +1690,83 @@
     // 獲取當前預約數據的輔助函數
     async function handleViewChargingClick() {
       console.log('🎯 查看充電狀況按鈕被點擊了！');
-      console.log('🔍 當前 chargingSession 狀態:', chargingSession);
-      
-      if (chargingSession) {
-        console.log('🔍 chargingSession.session_id:', chargingSession.session_id);
-        console.log('🔍 chargingSession.sessionId:', chargingSession.sessionId);
-        console.log('🔍 chargingSession.id:', chargingSession.id);
-        console.log('🔍 chargingSession 的所有鍵:', Object.keys(chargingSession));
-        console.log('🔍 chargingSession 完整內容:', chargingSession);
-      } else {
-        console.warn('⚠️ chargingSession 為 null，這表示用戶沒有先按「開始充電」按鈕');
-        console.warn('⚠️ 請先按「開始充電」按鈕來獲取 session_id');
-        alert('請先按「開始充電」按鈕來開始充電會話');
-        return;
-      }
       
       try {
-        // 獲取當前預約數據
-        const authToken = localStorage.getItem('auth_token');
-        const response = await fetch('http://120.110.115.126:18081/user/purchase/top', {
+        console.log('📥 調用本地 statusIng API（會自動從登入 session 獲取 session_id）');
+        
+        // 調用本地的 statusIng API（會自動從登入 session 獲取 session_id）
+        const statusResponse = await fetch('/user/purchase/statusIng', {
           method: 'GET',
           headers: {
             'Accept': 'application/json',
-            'Authorization': `Bearer ${authToken}`
-          },
-          mode: 'cors'
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+          }
         });
         
-        const json = await response.json();
-        console.log('📥 獲取預約數據:', json);
+        console.log('📡 StatusIng API HTTP 狀態:', statusResponse.status);
         
-        if (response.ok && json && json.success && json.data) {
-          const data = json.data;
+        if (statusResponse.ok) {
+          const statusResult = await statusResponse.json();
+          console.log('📥 StatusIng API 回應:', statusResult);
           
-          // 檢查預約狀態
-          if (data.status === 'IN_PROGRESS') {
-            // 優先使用從「開始充電」API 獲取的 session_id
-            let sessionId = null;
+          if (statusResult && statusResult.success && statusResult.data) {
+            // 使用真實的充電狀態數據
+            chargingSession = statusResult.data;
+            startTime = new Date(chargingSession.start_time);
             
-            if (chargingSession && chargingSession.session_id) {
-              // 使用從「開始充電」API 回傳的 session_id
-              sessionId = chargingSession.session_id;
-              console.log('✅ 使用「開始充電」API 回傳的 session_id:', sessionId);
-            } else {
-              // 備用方案：從預約數據獲取
-              sessionId = data.id || data.session_id;
-              console.log('⚠️ 使用預約數據的 session_id (備用方案):', sessionId);
-            }
-            
-            console.log('🔍 準備調用 statusIng API，使用 session_id:', sessionId);
-            const sessionIdInt = parseInt(sessionId);
-            console.log('🔢 session_id 轉換為整數:', sessionIdInt);
-            const statusUrl = `http://120.110.115.126:18081/user/purchase/status_ing?session_id=${sessionIdInt}&sessionId=${sessionIdInt}`;
-            
-            const statusResponse = await fetch(statusUrl, {
-              method: 'GET',
-              headers: {
-                'Accept': 'application/json',
-                'Authorization': `Bearer ${authToken}`
-              },
-              mode: 'cors'
-            });
-            
-            if (statusResponse.ok) {
-              const statusResult = await statusResponse.json();
-              console.log('📥 StatusIng API 回應:', statusResult);
+            // ✅ 從 /user/purchase/top API 獲取預計結束時間
+            console.log('📥 從 /user/purchase/top 獲取預計結束時間...');
+            const authToken = localStorage.getItem('auth_token');
+            try {
+              const topResponse = await fetch('http://120.110.115.126:18081/user/purchase/top', {
+                method: 'GET',
+                headers: {
+                  'Accept': 'application/json',
+                  'Authorization': `Bearer ${authToken}`
+                },
+                mode: 'cors'
+              });
               
-              if (statusResult && statusResult.success && statusResult.data) {
-                // 使用真實的充電狀態數據
-                chargingSession = statusResult.data;
-                startTime = new Date(chargingSession.start_time);
+              if (topResponse.ok) {
+                const topResult = await topResponse.json();
+                console.log('📥 /user/purchase/top 回應:', topResult);
                 
-                // 顯示充電畫面
-                showChargingModal();
-                startChargingTimer();
-                
-                console.log('✅ 已獲取真實充電狀態:', chargingSession);
+                if (topResult && topResult.success && topResult.data && topResult.data.end_time) {
+                  chargingSession.end_time = topResult.data.end_time;
+                  console.log('✅ 已設定預計結束時間:', chargingSession.end_time);
+                } else {
+                  console.warn('⚠️ /user/purchase/top 沒有提供 end_time');
+                }
               }
+            } catch (err) {
+              console.warn('⚠️ 無法從 /user/purchase/top 獲取預計結束時間:', err);
             }
+            
+            // 顯示充電畫面
+            showChargingModal();
+            startChargingTimer();
+            
+            console.log('✅ 已獲取真實充電狀態:', chargingSession);
           } else {
-            console.log('⚠️ 預約狀態不是 IN_PROGRESS:', data.status);
+            console.warn('⚠️ StatusIng API 回應格式不正確:', statusResult);
+            alert(statusResult.message || '無法獲取充電狀態');
+          }
+        } else {
+          console.error('❌ StatusIng API 請求失敗:', statusResponse.status);
+          const errorData = await statusResponse.json().catch(() => ({}));
+          
+          if (statusResponse.status === 400) {
+            alert('找不到充電會話 ID，請先預約並開始充電');
+          } else if (statusResponse.status === 401) {
+            alert('認證失敗，請重新登入');
+          } else {
+            alert(errorData.message || '無法獲取充電狀態，請稍後再試');
           }
         }
       } catch (error) {
-        console.error('查看充電狀況錯誤:', error);
+        console.error('❌ 查看充電狀況錯誤:', error);
+        alert('查看充電狀況時發生錯誤：' + error.message);
       }
     }
     
@@ -1825,11 +1946,33 @@
           }
         });
       }
-
+      
       // 確認付款按鈕
       const confirmPaymentBtn = document.getElementById('confirmPaymentBtn');
       if (confirmPaymentBtn) {
         confirmPaymentBtn.addEventListener('click', confirmPayment);
+      }
+      
+      // 未付款訂單模態框事件
+      const closeUnpaidOrderBtn = document.getElementById('closeUnpaidOrderBtn');
+      if (closeUnpaidOrderBtn) {
+        closeUnpaidOrderBtn.addEventListener('click', hideUnpaidOrderModal);
+      }
+      
+      // 點擊背景關閉未付款訂單模態框
+      const unpaidOrderModal = document.getElementById('unpaidOrderModal');
+      if (unpaidOrderModal) {
+        unpaidOrderModal.addEventListener('click', function(e) {
+          if (e.target === this) {
+            hideUnpaidOrderModal();
+          }
+        });
+      }
+      
+      // 付款按鈕
+      const payUnpaidOrderBtn = document.getElementById('payUnpaidOrderBtn');
+      if (payUnpaidOrderBtn) {
+        payUnpaidOrderBtn.addEventListener('click', payUnpaidOrder);
       }
     }
 
@@ -1963,18 +2106,11 @@
         progressFill.textContent = `${Math.round(progress)}%`;
       }
       
-      // 更新會話ID
+      // 更新會話ID - 統一使用 chargingSession.session_id（從後端 session 獲取）
       const sessionIdEl = document.getElementById('sessionId');
       if (sessionIdEl) {
-        // 優先使用 chargingSession.session_id
-        let sessionIdToShow = chargingSession.session_id;
-        
-        // 如果 chargingSession.session_id 不存在，嘗試從 localStorage 獲取
-        if (!sessionIdToShow) {
-          sessionIdToShow = localStorage.getItem('charging_session_id');
-          console.log('⚠️ chargingSession.session_id 不存在，使用 localStorage:', sessionIdToShow);
-        }
-        
+        // 只使用 chargingSession.session_id（由後端從 session 提供）
+        const sessionIdToShow = chargingSession.session_id;
         sessionIdEl.textContent = sessionIdToShow || '-';
         
         // 調試信息
@@ -1985,15 +2121,26 @@
         }
       }
       
-      // 獲取實際使用的會話ID
-      const actualSessionId = chargingSession.session_id || localStorage.getItem('charging_session_id');
+      // 更新帳單ID - 使用 charging_bill_id（與 pile_id 不同）
+      const billEl = document.getElementById('chargingBillId');
+      if (billEl) {
+        const billIdToShow = chargingSession.charging_bill_id;
+        if (billIdToShow !== undefined && billIdToShow !== null && billIdToShow !== 0) {
+          billEl.textContent = billIdToShow;
+        } else {
+          billEl.textContent = '-';
+        }
+      }
+      
+      // 獲取實際使用的會話ID - 只從 chargingSession 獲取
+      const actualSessionId = chargingSession.session_id;
       
       console.log('充電資訊已更新:', {
         elapsed: `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`,
         progress: progressFill ? progressFill.style.width : 'N/A',
         sessionId: actualSessionId,
-        chargingSession_session_id: chargingSession.session_id,
-        localStorage_session_id: localStorage.getItem('charging_session_id')
+        chargingBillId: chargingSession.charging_bill_id,
+        chargingSession_session_id: chargingSession.session_id
       });
     }
 
@@ -2049,14 +2196,14 @@
           
           console.log('📤 開始充電請求參數:', startRequestBody);
           
-          const startResponse = await fetch('http://120.110.115.126:18081/user/purchase/start', {
+          // 調用本地路由（會自動保存 charging_bill_id 到 session）
+          const startResponse = await fetch('/user/purchase/start', {
             method: 'POST',
             headers: {
               'Accept': 'application/json',
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${authToken}`
+              'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
             },
-            mode: 'cors',
             body: JSON.stringify(startRequestBody)
           });
           
@@ -2092,8 +2239,18 @@
               console.error('❌ chargingSession.session_id 不存在');
             }
             
+            // 確保 charging_bill_id 被正確保存
+            if (chargingSession.charging_bill_id !== undefined && chargingSession.charging_bill_id !== null) {
+              console.log('✅ charging_bill_id 已存在:', chargingSession.charging_bill_id);
+            } else {
+              console.warn('⚠️ charging_bill_id 不存在或為 null/undefined');
+              console.warn('  - result.data.charging_bill_id:', result.data?.charging_bill_id);
+              console.warn('  - chargingSession.charging_bill_id:', chargingSession.charging_bill_id);
+            }
+            
             // 檢查所有必要的欄位是否存在
             console.log('🔍 檢查必要欄位:');
+            console.log('  - charging_bill_id:', chargingSession.charging_bill_id, '(類型:', typeof chargingSession.charging_bill_id, ')');
             console.log('  - session_id:', chargingSession.session_id);
             console.log('  - start_time:', chargingSession.start_time);
             console.log('  - end_time:', chargingSession.end_time);
@@ -2103,11 +2260,31 @@
             console.log('  - total_amount:', chargingSession.total_amount);
             console.log('  - discount_amount:', chargingSession.discount_amount);
             console.log('  - final_amount:', chargingSession.final_amount);
+            console.log('  - payment_status:', chargingSession.payment_status);
+            console.log('  - pile_response:', chargingSession.pile_response);
+            console.log('  - payment_transaction_responses:', chargingSession.payment_transaction_responses);
             
-            // 保存預約時間信息到 chargingSession
+            // 保存預約時間信息到 chargingSession（不覆蓋後端回傳的 charging_bill_id）
             chargingSession.start_time = data.start_time;  // 預約的開始時間
             chargingSession.end_time = data.end_time;      // 預約的結束時間
             chargingSession.pile_id = data.pile_id || data.id;
+            
+            // 立即更新畫面上的 session 與帳單 ID
+            const sEl = document.getElementById('sessionId');
+            if (sEl) sEl.textContent = chargingSession.session_id || '-';
+            
+            const billEl = document.getElementById('chargingBillId');
+            if (billEl) {
+              // 檢查 charging_bill_id 是否存在且不為 0
+              const billId = chargingSession.charging_bill_id;
+              if (billId !== undefined && billId !== null && billId !== 0) {
+                billEl.textContent = billId;
+                console.log('✅ 帳單ID已更新到畫面:', billId);
+              } else {
+                billEl.textContent = '-';
+                console.warn('⚠️ 帳單ID不存在或為0，顯示為 "-"');
+              }
+            }
             
             // 計算預約時長（分鐘）
             const reservationStartTime = new Date(data.start_time);
@@ -2148,6 +2325,7 @@
               
               // 保存到 localStorage 以便後續使用（包括刷新頁面後）
               localStorage.setItem('charging_session_id', chargingSession.session_id);
+              localStorage.setItem('charging_bill_id', chargingSession.charging_bill_id || '');
               localStorage.setItem('charging_start_time', chargingSession.start_time);
               localStorage.setItem('charging_end_time', chargingSession.end_time);
               localStorage.setItem('charging_price_per_hour', chargingSession.price_per_hour || 20);
@@ -2156,6 +2334,7 @@
               
               console.log('💾 已保存到 localStorage:');
               console.log('  - charging_session_id:', chargingSession.session_id);
+              console.log('  - charging_bill_id:', chargingSession.charging_bill_id || '-');
               console.log('  - charging_start_time:', chargingSession.start_time);
               console.log('  - charging_end_time:', chargingSession.end_time);
               console.log('  - charging_price_per_hour:', chargingSession.price_per_hour || 20);
@@ -2164,6 +2343,7 @@
               
               console.log('💾 充電會話數據已保存到 localStorage:', {
                 session_id: chargingSession.session_id,
+                charging_bill_id: chargingSession.charging_bill_id,
                 start_time: chargingSession.start_time,
                 price_per_hour: chargingSession.price_per_hour
               });
@@ -2621,7 +2801,7 @@
                 clearChargingSession();
                 hideChargingModal();
                 return;
-              } else if (sessionStatus === 'CANCELLED') {
+              } else if (sessionStatus === 'CANCELED' || sessionStatus === 'CANCELLED') {
                 console.warn('⚠️ 會話已經取消，無法結束');
                 alert('充電會話已經取消');
                 clearChargingSession();
@@ -2689,20 +2869,54 @@
          if (result && result.success) {
            console.log('✅ 後端 API 完成充電成功');
            
-           // 保存 session_id 和 charging_bill_id 用於後續處理
+           // 保存所有充電完成資料
            const completedSessionId = result.data?.session_id || chargingSession?.session_id;
            const chargingBillId = result.data?.charging_bill_id;
            const paymentStatus = result.data?.payment_status;
            const finalAmount = result.data?.final_amount;
+           const pileResponse = result.data?.pile_response;
+           const paymentTransactions = result.data?.payment_transaction_responses || [];
            
-           console.log('💾 保存的 session_id:', completedSessionId);
-           console.log('💾 充電帳單 ID:', chargingBillId);
-           console.log('💾 付款狀態:', paymentStatus);
-           console.log('💾 最終金額:', finalAmount);
+           console.log('💾 保存的充電完成資料:');
+           console.log('  - session_id:', completedSessionId);
+           console.log('  - charging_bill_id:', chargingBillId);
+           console.log('  - payment_status:', paymentStatus);
+           console.log('  - final_amount:', finalAmount);
+           console.log('  - pile_response:', pileResponse);
+           console.log('  - payment_transactions:', paymentTransactions);
+           
+           // 保存 charging_bill_id 到 localStorage（如果後端有回傳）
+           if (chargingBillId) {
+             localStorage.setItem('charging_bill_id', chargingBillId);
+             console.log('💾 charging_bill_id 已保存到 localStorage:', chargingBillId);
+           }
            
            // 顯示充電完成資訊
            if (chargingBillId && finalAmount) {
              console.log(`💰 充電完成！帳單編號: ${chargingBillId}, 金額: ${finalAmount} 元`);
+             
+             // 顯示充電樁資訊
+             if (pileResponse) {
+               console.log('📍 充電樁資訊:');
+               console.log('  - 型號:', pileResponse.model);
+               console.log('  - 連接器類型:', pileResponse.connector_type);
+               console.log('  - 最大功率:', pileResponse.max_kw, 'kW');
+               console.log('  - 位置:', pileResponse.location_address);
+             }
+             
+             // 顯示支付交易資訊
+             if (paymentTransactions.length > 0) {
+               console.log('💳 支付交易資訊:');
+               paymentTransactions.forEach((transaction, index) => {
+                 console.log(`  交易 ${index + 1}:`);
+                 console.log('    - 支付方式:', transaction.payment_method);
+                 console.log('    - 提供商:', transaction.provider);
+                 console.log('    - 交易ID:', transaction.provider_transaction_id);
+                 console.log('    - 金額:', transaction.amount, transaction.currency);
+                 console.log('    - 狀態:', transaction.status);
+                 console.log('    - 訊息:', transaction.message);
+               });
+             }
              
              // 可以在此處添加顯示帳單詳情的邏輯
              if (paymentStatus === 'UNPAID') {
@@ -4433,7 +4647,7 @@ function saveAuthToken(token) {
       const reservationEndTime = new Date(data.end_time);
       
       // 檢查狀態，如果是 COMPLETED、CANCELLED、EXPIRED 等狀態，直接顯示「目前無預約」
-      if (data.status === 'COMPLETED' || data.status === 'CANCELLED' || data.status === 'EXPIRED') {
+      if (data.status === 'COMPLETED' || data.status === 'CANCELED' || data.status === 'CANCELLED' || data.status === 'EXPIRED') {
         listEl.innerHTML = '';
         const noReservationDiv = document.createElement('div');
         noReservationDiv.style.textAlign = 'center';
@@ -4603,7 +4817,7 @@ function saveAuthToken(token) {
         <div style="margin-top:8px;display:flex;gap:8px;">
             ${isInProgress ? 
               `<button id="btnViewCharging" class="btn btn-success" style="background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);" onclick="handleViewChargingClick()">查看充電狀況</button>` :
-            actualStatus === 'CANCELLED' ?
+            (actualStatus === 'CANCELED' || actualStatus === 'CANCELLED') ?
             `<div style="color: #ef4444; font-weight: 600; padding: 8px 16px; background: #fef2f2; border-radius: 6px; border: 1px solid #fecaca;">預約已取消</div>` :
             `<button id="btnCancelResv" class="btn btn-secondary">取消預約</button>
                ${isTimeToStart ? `<button id="btnStartCharging" class="btn btn-danger" style="background: linear-gradient(135deg, #e53e3e, #c53030); color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(229, 62, 62, 0.3);" onclick="console.log('開始充電按鈕被點擊 - onclick'); handleStartChargingClick();" onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 8px rgba(229, 62, 62, 0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(229, 62, 62, 0.3)'">開始充電</button>` : ''}`
@@ -4973,14 +5187,14 @@ function saveAuthToken(token) {
                     
                     console.log('📤 開始充電請求參數:', startRequestBody);
                     
-                    const response = await fetch('http://120.110.115.126:18081/user/purchase/start', {
+                    // 調用本地路由（會自動保存 charging_bill_id 到 session）
+                    const response = await fetch('/user/purchase/start', {
                       method: 'POST',
                       headers: {
                         'Accept': 'application/json',
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${authToken}`
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
                       },
-                      mode: 'cors',
                       body: JSON.stringify(startRequestBody)
                     });
                     
@@ -5006,6 +5220,14 @@ function saveAuthToken(token) {
                       
                       // 保存充電會話數據
                       chargingSession = result.data;
+                      
+                      // 記錄新欄位
+                      console.log('🔍 開始充電 API 新欄位:');
+                      console.log('  - charging_bill_id:', chargingSession.charging_bill_id);
+                      console.log('  - payment_status:', chargingSession.payment_status);
+                      console.log('  - pile_response:', chargingSession.pile_response);
+                      console.log('  - payment_transaction_responses:', chargingSession.payment_transaction_responses);
+                      
                       startTime = new Date(chargingSession.start_time);
                       
                       // 關閉「我的預約」模態框
@@ -5097,6 +5319,508 @@ function saveAuthToken(token) {
     // 將函數暴露到全局作用域
     window.openMyReservations = openMyReservations;
     
+    // 預約列表功能
+    let currentPage = 1;
+    let currentFilters = {};
+    
+    async function loadReservationList(page = 1, filters = {}) {
+      const listEl = document.getElementById('resvlist-list');
+      const errEl = document.getElementById('resvlist-error');
+      const paginationEl = document.getElementById('resvlist-pagination');
+      
+      errEl.textContent = '';
+      listEl.innerHTML = '';
+      paginationEl.innerHTML = '';
+      
+      try {
+        const authToken = localStorage.getItem('auth_token');
+        
+        // 建立查詢參數
+        const params = new URLSearchParams({
+          page: page,
+          limit: filters.limit || '10',
+          order: 'desc',
+          sort: 'id'
+        });
+        
+        // 加入篩選參數
+        if (filters.status) {
+          params.append('status', filters.status);
+        }
+        if (filters.start_time) {
+          params.append('start_time', filters.start_time);
+        }
+        if (filters.end_time) {
+          params.append('end_time', filters.end_time);
+        }
+        
+        console.log('📥 載入預約列表，參數:', params.toString());
+        
+        const response = await fetch(`http://120.110.115.126:18081/user/purchase/list?${params.toString()}`, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          },
+          mode: 'cors'
+        });
+        
+        const json = await response.json();
+        console.log('📥 預約列表 API 回應:', json);
+        
+        if (response.ok && json && json.success) {
+          if (json.data && json.data.records && json.data.records.length > 0) {
+            // 顯示預約列表
+            json.data.records.forEach((record) => {
+              const item = document.createElement('div');
+              item.style.cssText = 'border: 1px solid #e2e8f0; border-radius: 8px; background: #f8f9fa;';
+              
+              const startTime = new Date(record.start_time);
+              const endTime = new Date(record.end_time);
+              const statusColors = {
+                'RESERVED': '#667eea',
+                'IN_PROGRESS': '#10b981',
+                'COMPLETED': '#6c757d',
+                'CANCELED': '#ef4444',
+                'CANCELLED': '#ef4444',
+                'EXPIRED': '#f59e0b'
+              };
+              
+              const statusColors_zh = {
+                'RESERVED': '已預約',
+                'IN_PROGRESS': '進行中',
+                'COMPLETED': '已完成',
+                'CANCELED': '已取消',
+                'CANCELLED': '已取消',
+                'EXPIRED': '已過期'
+              };
+              
+              const formatTime = (timeStr) => {
+                const date = new Date(timeStr);
+                return date.toLocaleString('zh-TW', { 
+                  year: 'numeric', month: '2-digit', day: '2-digit',
+                  hour: '2-digit', minute: '2-digit', second: '2-digit',
+                  hour12: true
+                });
+              };
+              
+              // 計算時長
+              const durationMinutes = record.duration_min || Math.floor((endTime - startTime) / (1000 * 60));
+              const hours = Math.floor(durationMinutes / 60);
+              const minutes = durationMinutes % 60;
+              const durationText = hours > 0 ? `${hours}小時${minutes}分鐘` : `${minutes}分鐘`;
+              
+              // 顯示更多資訊
+              item.innerHTML = `
+                <div style="padding: 16px;">
+                  <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                    <div style="flex: 1;">
+                      <div style="font-weight: 600; color: #2d3748; margin-bottom: 6px; font-size: 15px;">ID: ${record.id}</div>
+                      <div style="font-size: 13px; color: #4a5568; margin-bottom: 4px;">
+                        <span style="font-weight: 500;">時間：</span>${formatTime(record.start_time)} - ${formatTime(record.end_time)}
+                      </div>
+                      <div style="font-size: 13px; color: #4a5568; margin-bottom: 4px;">
+                        <span style="font-weight: 500;">時長：</span>${durationText}
+                      </div>
+                      ${record.pile_response ? `
+                        <div style="font-size: 13px; color: #4a5568; margin-bottom: 4px;">
+                          <span style="font-weight: 500;">充電樁：</span>${record.pile_response.model || '未知型號'} (${record.pile_response.max_kw || 0}kW)
+                        </div>
+                        <div style="font-size: 12px; color: #718096;">
+                          <span style="font-weight: 500;">位置：</span>${record.pile_response.location_address || '未知位置'}
+                        </div>
+                      ` : ''}
+                    </div>
+                    <div style="padding: 6px 12px; border-radius: 6px; background: ${statusColors[record.status] || '#6c757d'}; color: white; font-size: 12px; font-weight: 700; white-space: nowrap; margin-left: 12px;">
+                      ${statusColors_zh[record.status] || record.status}
+                    </div>
+                  </div>
+                </div>
+              `;
+              
+              listEl.appendChild(item);
+            });
+            
+            // 顯示分頁資訊和控制
+            if (json.data.page && json.data.page.total_page > 1) {
+              const page = json.data.page.current_page;
+              const totalPage = json.data.page.total_page;
+              const totalCount = json.data.page.total_count;
+              
+              paginationEl.innerHTML = `
+                <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:center;">
+                  <button onclick="loadReservationList(1, currentFilters)" style="padding:8px 12px;border:1px solid #d1d5db;background:white;border-radius:6px;cursor:pointer;font-size:13px;" ${page === 1 ? 'disabled' : ''}">« 首頁</button>
+                  <button onclick="loadReservationList(${page - 1}, currentFilters)" style="padding:8px 12px;border:1px solid #d1d5db;background:white;border-radius:6px;cursor:pointer;font-size:13px;" ${page === 1 ? 'disabled' : ''}">‹ 上一頁</button>
+                  <div style="font-size:13px;color:#4a5568;">
+                    第 <strong>${page}</strong> 頁 / 共 ${totalPage} 頁 (總計 ${totalCount} 筆)
+                  </div>
+                  <button onclick="loadReservationList(${page + 1}, currentFilters)" style="padding:8px 12px;border:1px solid #d1d5db;background:white;border-radius:6px;cursor:pointer;font-size:13px;" ${page === totalPage ? 'disabled' : ''}>下一頁 ›</button>
+                  <button onclick="loadReservationList(${totalPage}, currentFilters)" style="padding:8px 12px;border:1px solid #d1d5db;background:white;border-radius:6px;cursor:pointer;font-size:13px;" ${page === totalPage ? 'disabled' : ''}">末頁 »</button>
+                </div>
+              `;
+            } else if (json.data.page) {
+              paginationEl.innerHTML = `
+                <div style="font-size:13px;color:#4a5568;text-align:center;">
+                  共 ${json.data.page.total_count} 筆資料
+                </div>
+              `;
+            }
+          } else {
+            // 沒有預約記錄
+            listEl.innerHTML = `
+              <div style="text-align: center; padding: 40px; color: #718096;">
+                目前沒有預約記錄
+              </div>
+            `;
+          }
+        } else if (json && json.success && json.data && Object.keys(json.data).length === 0) {
+          // 報錯的情況：data 是空物件
+          console.warn('⚠️ API 返回空的 data 物件（錯誤情況）');
+          errEl.textContent = json.message || '無法載入預約列表';
+          listEl.innerHTML = `
+            <div style="text-align: center; padding: 40px; color: #d63031;">
+              無法載入預約列表：${json.message || '未知錯誤'}
+            </div>
+          `;
+        } else {
+          errEl.textContent = (json && json.message) ? json.message : '無法載入預約列表';
+          listEl.innerHTML = `
+            <div style="text-align: center; padding: 40px; color: #d63031;">
+              ${errEl.textContent}
+            </div>
+          `;
+        }
+      } catch (e) {
+        console.error('❌ 載入預約列表錯誤:', e);
+        errEl.textContent = '讀取失敗';
+        listEl.innerHTML = `
+          <div style="text-align: center; padding: 40px; color: #d63031;">
+            載入失敗：${e.message}
+          </div>
+        `;
+      }
+      
+      currentPage = page;
+    }
+    
+    // 主函數：開啟預約列表
+    async function openReservationList() {
+      // 顯示模態框
+      document.getElementById('resvlist-backdrop').style.display = 'block';
+      document.getElementById('resvlist-modal').style.display = 'flex';  // 改為 flex 以支援垂直佈局
+      
+      // 載入第一頁
+      currentPage = 1;
+      await loadReservationList(1, currentFilters);
+    }
+    
+    // 檢查付款狀態
+    // 由 purchaseId 解析 charging_bill_id
+    async function resolveBillId(purchaseId) {
+      try {
+        const authToken = localStorage.getItem('auth_token');
+        const resp = await fetch(`http://120.110.115.126:18081/user/purchase/bill_info/${purchaseId}`, {
+          method: 'GET',
+          headers: { 'Accept': 'application/json', 'Authorization': `Bearer ${authToken}` },
+          mode: 'cors'
+        });
+        const json = await resp.json();
+        if (resp.ok && json && json.success && json.data && json.data.charging_bill_id) {
+          return json.data.charging_bill_id;
+        }
+      } catch (e) {
+        console.warn('⚠️ 解析 charging_bill_id 失敗:', e);
+      }
+      return null;
+    }
+
+    async function checkPaymentStatus(billId, purchaseId, statusDomId) {
+      console.log('🔍 檢查付款狀態，billId:', billId, 'purchaseId:', purchaseId);
+      // 若沒有 billId，嘗試解析
+      if (!billId && purchaseId) {
+        billId = await resolveBillId(purchaseId);
+      }
+      const statusEl = document.getElementById(statusDomId || (billId ? `payment-status-${billId}` : `payment-status-p${purchaseId}`));
+      if (!billId) {
+        if (statusEl) statusEl.innerHTML = '💳 <span style="color:#718096;">暫無訂單 ID</span>';
+        return;
+      }
+      
+      try {
+        const authToken = localStorage.getItem('auth_token');
+        const response = await fetch(`http://120.110.115.126:18081/user/purchase/unpaid_bill?charging_bill_id=${billId}`, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          },
+          mode: 'cors'
+        });
+        
+        const data = await response.json();
+        console.log('📥 付款狀態 API 回應:', data);
+        
+        // statusEl 已在前方取得
+        if (statusEl) {
+          if (response.ok && data && data.success && data.data) {
+            const bill = data.data;
+            if (bill.payment_status === 'PAID') {
+              statusEl.innerHTML = '💳 <span style="color: #10b981;">已付款</span>';
+            } else if (bill.payment_status === 'UNPAID') {
+              statusEl.innerHTML = '💳 <span style="color: #ef4444;">未付款</span>';
+            }
+          } else if (data && data.message && data.message.includes('未結清')) {
+            statusEl.innerHTML = '💳 <span style="color: #ef4444;">未付款</span>';
+          } else {
+            statusEl.innerHTML = '💳 <span style="color: #10b981;">已付款</span>';
+          }
+        }
+      } catch (error) {
+        console.error('❌ 檢查付款狀態失敗:', error);
+        if (statusEl) {
+          statusEl.innerHTML = '💳 <span style="color: #f59e0b;">檢查失敗</span>';
+        }
+      }
+    }
+    
+    // 查看未付款訂單
+    async function viewUnpaidBill(billId, purchaseId) {
+      console.log('🔍 查看未付款訂單，billId:', billId, 'purchaseId:', purchaseId);
+      if (!billId && purchaseId) {
+        billId = await resolveBillId(purchaseId);
+      }
+      if (!billId) {
+        alert('無法取得充電訂單 ID，請稍後再試');
+        return;
+      }
+      
+      try {
+        const authToken = localStorage.getItem('auth_token');
+        const response = await fetch(`http://120.110.115.126:18081/user/purchase/unpaid_bill?charging_bill_id=${billId}`, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          },
+          mode: 'cors'
+        });
+        
+        const data = await response.json();
+        console.log('📥 未付款訂單 API 回應:', data);
+        console.log('📥 API 回應中的 charging_bill_id:', data?.data?.charging_bill_id);
+        console.log('📥 傳入的 billId 參數:', billId);
+        
+        if (response.ok && data && data.success && data.data) {
+          const bill = data.data;
+          
+          // 如果 API 回應中沒有 charging_bill_id，使用傳入的 billId
+          if (!bill.charging_bill_id || bill.charging_bill_id === 0 || bill.charging_bill_id === '0') {
+            console.log('⚠️ API 回應中沒有 charging_bill_id，使用傳入的 billId:', billId);
+            bill.charging_bill_id = billId;
+          }
+          
+          // 構建充電樁資訊
+          let pileInfo = '無';
+          if (bill.pile_response) {
+            const pile = bill.pile_response;
+            pileInfo = `
+型號: ${pile.model || '-'}
+連接器類型: ${pile.connector_type || '-'}
+最大功率: ${pile.max_kw || '-'} kW
+韌體版本: ${pile.firmware_version || '-'}
+地址: ${pile.location_address || '-'}
+座標: (${pile.lat || '-'}, ${pile.lng || '-'})`;
+          }
+          
+          // 構建支付交易資訊
+          let paymentInfo = '無';
+          if (bill.payment_transaction_responses && bill.payment_transaction_responses.length > 0) {
+            paymentInfo = bill.payment_transaction_responses.map((txn, idx) => `
+交易 #${idx + 1}
+  付款方式: ${txn.payment_method || '-'}
+  提供者: ${txn.provider || '-'}
+  交易 ID: ${txn.provider_transaction_id || '-'}
+  金額: ${txn.amount || '-'} ${txn.currency || '-'}
+  狀態: ${txn.status || '-'}
+  訊息: ${txn.message || '-'}
+  請求時間: ${txn.request_time ? new Date(txn.request_time).toLocaleString('zh-TW') : '-'}
+  完成時間: ${txn.completed_time ? new Date(txn.completed_time).toLocaleString('zh-TW') : '-'}
+  備註: ${txn.meta || '-'}`).join('\n');
+          }
+          
+          // 確保 charging_bill_id 正確顯示（即使值為 0 或 null 也嘗試顯示 billId）
+          const displayBillId = (bill.charging_bill_id !== undefined && bill.charging_bill_id !== null && bill.charging_bill_id !== 0 && bill.charging_bill_id !== '0') 
+            ? bill.charging_bill_id 
+            : (billId && billId !== '0') ? billId : '-';
+          
+          // 顯示未付款訂單模態框
+          showUnpaidOrderModal(bill, displayBillId);
+          
+          // 如果有充電樁資訊，記錄到 console
+          if (bill.pile_response) {
+            console.log('📍 充電樁資訊:', bill.pile_response);
+          }
+          
+          // 如果有支付交易資訊，記錄到 console
+          if (bill.payment_transaction_responses && bill.payment_transaction_responses.length > 0) {
+            console.log('💳 支付交易資訊:', bill.payment_transaction_responses);
+          }
+        } else {
+          // 如果回傳「未結清」訊息，顯示未付款
+          if (data && data.message && data.message.includes('未結清')) {
+            alert('此訂單尚有未結清款項');
+          } else {
+            alert(data?.message || '此訂單已結清或無需付款');
+          }
+        }
+      } catch (error) {
+        console.error('❌ 獲取未付款訂單失敗:', error);
+        alert('連線失敗，請稍後再試');
+      }
+    }
+    
+    // 顯示未付款訂單模態框
+    function showUnpaidOrderModal(bill, displayBillId) {
+      // 填充訂單資訊
+      document.getElementById('unpaidBillId').textContent = displayBillId;
+      document.getElementById('unpaidSessionId').textContent = bill.session_id || '-';
+      document.getElementById('unpaidStartTime').textContent = bill.start_time ? new Date(bill.start_time).toLocaleString('zh-TW') : '-';
+      document.getElementById('unpaidEndTime').textContent = bill.end_time ? new Date(bill.end_time).toLocaleString('zh-TW') : '-';
+      document.getElementById('unpaidDuration').textContent = bill.duration_min ? `${bill.duration_min} 分鐘` : '-';
+      document.getElementById('unpaidPricePerHour').textContent = bill.price_per_hour ? `$${bill.price_per_hour}` : '-';
+      document.getElementById('unpaidServiceFee').textContent = bill.service_fee !== undefined && bill.service_fee !== null ? `$${bill.service_fee}` : '-';
+      document.getElementById('unpaidTotalAmount').textContent = bill.total_amount !== undefined && bill.total_amount !== null ? `$${bill.total_amount}` : '-';
+      document.getElementById('unpaidDiscountAmount').textContent = bill.discount_amount !== undefined && bill.discount_amount !== null ? `$${bill.discount_amount}` : '-';
+      document.getElementById('unpaidFinalAmount').textContent = bill.final_amount !== undefined && bill.final_amount !== null ? `$${bill.final_amount}` : '-';
+      
+      // 填充充電樁資訊
+      const pileInfoDiv = document.getElementById('unpaidPileInfo');
+      if (bill.pile_response) {
+        const pile = bill.pile_response;
+        document.getElementById('unpaidPileModel').textContent = pile.model || '-';
+        document.getElementById('unpaidPileConnector').textContent = pile.connector_type || '-';
+        document.getElementById('unpaidPileMaxKw').textContent = pile.max_kw !== undefined && pile.max_kw !== null ? `${pile.max_kw} kW` : '-';
+        document.getElementById('unpaidPileAddress').textContent = pile.location_address || '-';
+        pileInfoDiv.style.display = 'block';
+      } else {
+        pileInfoDiv.style.display = 'none';
+      }
+      
+      // 保存當前訂單資料供付款使用
+      window.currentUnpaidBill = {
+        charging_bill_id: displayBillId,
+        final_amount: bill.final_amount,
+        bill_data: bill
+      };
+      
+      // 顯示模態框
+      const modal = document.getElementById('unpaidOrderModal');
+      if (modal) {
+        modal.style.display = 'flex';
+        document.body.classList.add('charging-modal-open');
+      }
+    }
+    
+    // 隱藏未付款訂單模態框
+    function hideUnpaidOrderModal() {
+      const modal = document.getElementById('unpaidOrderModal');
+      if (modal) {
+        modal.style.display = 'none';
+        document.body.classList.remove('charging-modal-open');
+      }
+    }
+    
+    // 處理未付款訂單的付款
+    async function payUnpaidOrder() {
+      if (!window.currentUnpaidBill) {
+        alert('無法取得訂單資訊');
+        return;
+      }
+      
+      const billId = window.currentUnpaidBill.charging_bill_id;
+      const amount = window.currentUnpaidBill.final_amount;
+      
+      console.log('💳 開始付款未付款訂單，billId:', billId, 'amount:', amount);
+      
+      // TODO: 調用付款 API
+      // 這裡可以調用後端的付款 API，例如：
+      // const response = await fetch('/user/purchase/pay', { ... });
+      
+      // 暫時顯示確認訊息
+      if (confirm(`確認要付款此訂單嗎？\n訂單 ID: ${billId}\n金額: $${amount}`)) {
+        alert('付款功能開發中...');
+        // 付款成功後可以關閉模態框並重新載入訂單列表
+        // hideUnpaidOrderModal();
+      }
+    }
+    
+    // 從 localStorage 讀取 charging_bill_id 並查看未付款訂單
+    async function viewUnpaidOrderFromStorage() {
+      console.log('🔍 查看未付款訂單（從 localStorage）');
+      
+      // 從 localStorage 獲取 charging_bill_id
+      const chargingBillId = localStorage.getItem('charging_bill_id');
+      
+      if (!chargingBillId || chargingBillId === 'null' || chargingBillId === '' || chargingBillId === '0') {
+        alert('找不到充電帳單 ID，請先完成一次充電');
+        return;
+      }
+      
+      console.log('📦 從 localStorage 獲取的 charging_bill_id:', chargingBillId);
+      
+      // 調用 viewUnpaidBill 函數
+      await viewUnpaidBill(chargingBillId, null);
+    }
+    
+    // 將函數暴露到全局作用域
+    window.openReservationList = openReservationList;
+    window.loadReservationList = loadReservationList;
+    window.viewUnpaidBill = viewUnpaidBill;
+    window.viewUnpaidOrderFromStorage = viewUnpaidOrderFromStorage;
+    window.showUnpaidOrderModal = showUnpaidOrderModal;
+    window.hideUnpaidOrderModal = hideUnpaidOrderModal;
+    window.payUnpaidOrder = payUnpaidOrder;
+    window.checkPaymentStatus = checkPaymentStatus;
+    
+    // 篩選按鈕事件
+    document.getElementById('btn-filter-apply').addEventListener('click', async () => {
+      const status = document.getElementById('filter-status').value;
+      const startTime = document.getElementById('filter-start-time').value;
+      const endTime = document.getElementById('filter-end-time').value;
+      const limit = document.getElementById('filter-limit').value;
+      
+      currentFilters = {
+        status: status || undefined,
+        start_time: startTime || undefined,
+        end_time: endTime || undefined,
+        limit: limit
+      };
+      
+      currentPage = 1;
+      await loadReservationList(1, currentFilters);
+    });
+    
+    document.getElementById('btn-filter-reset').addEventListener('click', () => {
+      document.getElementById('filter-status').value = '';
+      document.getElementById('filter-start-time').value = '';
+      document.getElementById('filter-end-time').value = '';
+      document.getElementById('filter-limit').value = '10';
+      
+      currentFilters = {};
+      currentPage = 1;
+      loadReservationList(1, currentFilters);
+    });
+    
+    // 關閉按鈕事件
+    document.getElementById('resvlist-close').addEventListener('click', () => {
+      document.getElementById('resvlist-backdrop').style.display = 'none';
+      document.getElementById('resvlist-modal').style.display = 'none';
+    });
+    document.getElementById('resvlist-backdrop').addEventListener('click', () => {
+      document.getElementById('resvlist-backdrop').style.display = 'none';
+      document.getElementById('resvlist-modal').style.display = 'none';
+    });
+    
     document.getElementById('myresv-close').addEventListener('click', () => {
       document.getElementById('myresv-backdrop').style.display = 'none';
       document.getElementById('myresv-modal').style.display = 'none';
@@ -5129,9 +5853,9 @@ function saveAuthToken(token) {
       border-radius: 20px;
       padding: 40px;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-      max-width: 800px;
-      width: 90%;
-      max-height: 90vh;
+      max-width: 1200px;
+      width: 95%;
+      max-height: 95vh;
       overflow-y: auto;
     }
 
@@ -5741,11 +6465,16 @@ function saveAuthToken(token) {
       .charging-container {
         width: 95%;
         margin: 10px;
+        padding: 20px;
       }
       
       .charging-scene {
-        height: 200px;
         padding: 20px;
+      }
+      
+      .vehicle-image {
+        max-width: 100%;
+        width: 100%;
       }
       
       .ev-charger {
@@ -6000,12 +6729,12 @@ function saveAuthToken(token) {
     }
 
     .charging-container {
-      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+      background: white;
       border-radius: 20px;
       padding: 0;
-      max-width: 400px;
-      width: 90%;
-      max-height: 80vh;
+      max-width: 1200px;
+      width: 95%;
+      max-height: 90vh;
       overflow: hidden;
       box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
       position: relative;
@@ -6015,9 +6744,9 @@ function saveAuthToken(token) {
       position: absolute;
       top: 15px;
       right: 15px;
-      background: rgba(255, 255, 255, 0.2);
+      background: rgba(0, 0, 0, 0.1);
       border: none;
-      color: white;
+      color: #333;
       font-size: 24px;
       width: 40px;
       height: 40px;
@@ -6025,11 +6754,10 @@ function saveAuthToken(token) {
       cursor: pointer;
       z-index: 10;
       transition: all 0.3s ease;
-      backdrop-filter: blur(10px);
     }
 
     .close-charging-btn:hover {
-      background: rgba(255, 255, 255, 0.3);
+      background: rgba(0, 0, 0, 0.2);
       transform: scale(1.1);
     }
 
@@ -6037,6 +6765,7 @@ function saveAuthToken(token) {
       padding: 40px 20px 20px;
       text-align: center;
       position: relative;
+      background: white;
     }
 
     .vehicle-container {
@@ -6045,7 +6774,8 @@ function saveAuthToken(token) {
     }
 
     .vehicle-image {
-      max-width: 250px;
+      max-width: 600px;
+      width: 100%;
       height: auto;
       border-radius: 15px;
       box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
@@ -6057,16 +6787,15 @@ function saveAuthToken(token) {
       left: 50%;
       transform: translateX(-50%);
       width: 80%;
-      background: rgba(255, 255, 255, 0.1);
+      background: rgba(0, 0, 0, 0.05);
       border-radius: 10px;
       padding: 8px;
-      backdrop-filter: blur(10px);
     }
 
     .progress-bar {
       width: 100%;
       height: 12px;
-      background: rgba(255, 255, 255, 0.2);
+      background: rgba(0, 0, 0, 0.1);
       border-radius: 6px;
       overflow: hidden;
       position: relative;
@@ -6090,10 +6819,9 @@ function saveAuthToken(token) {
 
     .charging-info {
       padding: 20px;
-      background: rgba(255, 255, 255, 0.05);
+      background: rgba(0, 0, 0, 0.05);
       margin: 0 20px;
       border-radius: 15px;
-      backdrop-filter: blur(10px);
     }
 
     .time-display {
@@ -6109,7 +6837,7 @@ function saveAuthToken(token) {
 
     .time-label {
       display: block;
-      color: rgba(255, 255, 255, 0.7);
+      color: rgba(0, 0, 0, 0.7);
       font-size: 12px;
       margin-bottom: 5px;
       font-weight: 500;
@@ -6117,7 +6845,7 @@ function saveAuthToken(token) {
 
     .time-value {
       display: block;
-      color: white;
+      color: #2d3748;
       font-size: 18px;
       font-weight: 700;
       font-family: 'Courier New', monospace;
@@ -6126,13 +6854,13 @@ function saveAuthToken(token) {
     .session-info {
       text-align: center;
       padding: 15px;
-      background: rgba(255, 255, 255, 0.1);
+      background: rgba(0, 0, 0, 0.05);
       border-radius: 10px;
     }
 
     .session-label {
       display: block;
-      color: rgba(255, 255, 255, 0.7);
+      color: rgba(0, 0, 0, 0.7);
       font-size: 12px;
       margin-bottom: 5px;
       font-weight: 500;
@@ -6212,6 +6940,10 @@ function saveAuthToken(token) {
           <span class="session-label">會話ID</span>
           <span id="sessionId" class="session-value">-</span>
           </div>
+        <div class="session-info">
+          <span class="session-label">帳單ID</span>
+          <span id="chargingBillId" class="session-value">-</span>
+          </div>
         </div>
         
       <!-- 底部結束充電按鈕 -->
@@ -6278,6 +7010,92 @@ function saveAuthToken(token) {
           <button id="confirmPaymentBtn" class="confirm-payment-btn">
             <span class="btn-icon">💳</span>
             確認付款
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 未付款訂單模態框 -->
+  <div id="unpaidOrderModal" class="payment-modal" style="display: none;">
+    <div class="payment-container" style="max-width: 600px;">
+      <div class="payment-header">
+        <h2>📋 未付款訂單</h2>
+        <button id="closeUnpaidOrderBtn" class="close-btn">&times;</button>
+      </div>
+      
+      <div class="payment-content">
+        <!-- 訂單資訊 -->
+        <div class="payment-summary">
+          <h3>訂單詳情</h3>
+          <div class="summary-item">
+            <span class="summary-label">充電帳單 ID：</span>
+            <span id="unpaidBillId" class="summary-value">-</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">會話 ID：</span>
+            <span id="unpaidSessionId" class="summary-value">-</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">開始時間：</span>
+            <span id="unpaidStartTime" class="summary-value">-</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">結束時間：</span>
+            <span id="unpaidEndTime" class="summary-value">-</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">充電時長：</span>
+            <span id="unpaidDuration" class="summary-value">-</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">每小時價格：</span>
+            <span id="unpaidPricePerHour" class="summary-value">-</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">服務費：</span>
+            <span id="unpaidServiceFee" class="summary-value">-</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">總金額：</span>
+            <span id="unpaidTotalAmount" class="summary-value">-</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">折扣金額：</span>
+            <span id="unpaidDiscountAmount" class="summary-value">-</span>
+          </div>
+          <div class="summary-item total">
+            <span class="summary-label">最終金額：</span>
+            <span id="unpaidFinalAmount" class="summary-value">-</span>
+          </div>
+        </div>
+        
+        <!-- 充電樁資訊 -->
+        <div id="unpaidPileInfo" class="payment-summary" style="margin-top: 20px; display: none;">
+          <h3>充電樁資訊</h3>
+          <div class="summary-item">
+            <span class="summary-label">型號：</span>
+            <span id="unpaidPileModel" class="summary-value">-</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">連接器類型：</span>
+            <span id="unpaidPileConnector" class="summary-value">-</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">最大功率：</span>
+            <span id="unpaidPileMaxKw" class="summary-value">-</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">地址：</span>
+            <span id="unpaidPileAddress" class="summary-value">-</span>
+          </div>
+        </div>
+        
+        <!-- 付款按鈕 -->
+        <div class="payment-controls" style="margin-top: 24px;">
+          <button id="payUnpaidOrderBtn" class="confirm-payment-btn" style="background: linear-gradient(135deg, #dc3545, #c82333);">
+            <span class="btn-icon">💳</span>
+            付款
           </button>
         </div>
       </div>

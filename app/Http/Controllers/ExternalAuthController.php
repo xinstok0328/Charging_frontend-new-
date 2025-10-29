@@ -129,17 +129,20 @@ class ExternalAuthController extends Controller
             Session::put('user_authenticated', true);
             Session::put('user_account', $credentials['account']);
             Session::put('auth_token', $token);
-            Session::put('user_data', $userData);
-            Session::put('auth_token', $token);
             
-            // 儲存完整的用戶資料
+            // 儲存完整的用戶資料（包含新的欄位）
             Session::put('user_data', [
+                'token' => $token,
                 'account' => $userData['account'] ?? $credentials['account'],
                 'name' => $userData['name'] ?? null,
-                'nick_name' => $userData['nick_name'] ?? null,
                 'role_id' => $userData['role_id'] ?? null,
                 'role_name' => $userData['role_name'] ?? null,
                 'role_code' => $userData['role_code'] ?? null,
+                'session_id' => $userData['session_id'] ?? null,
+                'session_status' => $userData['session_status'] ?? null,
+                'tier_id' => $userData['tier_id'] ?? null,
+                'tier_display_name' => $userData['tier_display_name'] ?? null,
+                'tier_expired_at' => $userData['tier_expired_at'] ?? null,
             ]);
 
             Log::info('Login successful', [
@@ -349,15 +352,21 @@ private function fetchUserInfoFromAPI(string $token, Request $request): JsonResp
                     // 處理用戶資料，確保格式一致
                     $userData = $apiData['data'];
                     
-                    // 標準化用戶資料格式
+                    // 標準化用戶資料格式（包含新增的欄位）
                     $standardizedUserData = [
                         'id' => $userData['id'] ?? null,
                         'account' => $userData['account'] ?? Session::get('user_account'),
                         'name' => $userData['name'] ?? null,
                         'email' => $userData['email'] ?? null,
                         'phone' => $userData['phone'] ?? null,
+                        'role_id' => $userData['role_id'] ?? null,
                         'role_name' => $userData['role_name'] ?? null,
                         'role_code' => $userData['role_code'] ?? null,
+                        'session_id' => $userData['session_id'] ?? null,
+                        'session_status' => $userData['session_status'] ?? null,
+                        'tier_id' => $userData['tier_id'] ?? null,
+                        'tier_display_name' => $userData['tier_display_name'] ?? null,
+                        'tier_expired_at' => $userData['tier_expired_at'] ?? null,
                         'create_time' => $userData['create_time'] ?? null,
                         'modify_time' => $userData['modify_time'] ?? null,
                         'user_img_responses' => $userData['user_img_responses'] ?? []
