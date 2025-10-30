@@ -5742,15 +5742,60 @@ function saveAuthToken(token) {
       
       console.log('💳 開始付款未付款訂單，billId:', billId, 'amount:', amount);
       
-      // TODO: 調用付款 API
-      // 這裡可以調用後端的付款 API，例如：
-      // const response = await fetch('/user/purchase/pay', { ... });
-      
-      // 暫時顯示確認訊息
-      if (confirm(`確認要付款此訂單嗎？\n訂單 ID: ${billId}\n金額: $${amount}`)) {
-        alert('付款功能開發中...');
-        // 付款成功後可以關閉模態框並重新載入訂單列表
-        // hideUnpaidOrderModal();
+      // 呼叫後端付款 API 取得藍新金流參數
+      try {
+        const headers = getAuthHeaders();
+        // 後端 API 目前不需 body；若未來支援指定帳單，可於 body 帶入 billId
+        const resp = await fetch('http://120.110.115.126:18081/user/purchase/pay', {
+          method: 'POST',
+          headers
+        });
+        const result = await resp.json();
+        console.log('💳 /user/purchase/pay 回應:', result);
+
+        if (!resp.ok || !result?.success) {
+          alert(result?.message || '取得付款資訊失敗，請稍後再試');
+          return;
+        }
+
+        const data = result.data || {};
+        const mid = data.mid;
+        const version = data.version;
+        const tradeInfo = data.trade_info;
+        const tradeSha = data.trade_sha;
+
+        if (!mid || !version || !tradeInfo || !tradeSha) {
+          alert('付款參數不完整，請稍後重試');
+          return;
+        }
+
+        // 動態建立表單送至藍新金流
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = 'https://ccore.newebpay.com/MPG/mpg_gateway';
+
+        const appendHidden = (name, value) => {
+          const input = document.createElement('input');
+          input.type = 'hidden';
+          input.name = name;
+          input.value = value;
+          form.appendChild(input);
+        };
+
+        // 對齊藍新欄位命名
+        appendHidden('MerchantID', mid);
+        appendHidden('Version', version);
+        appendHidden('TradeInfo', tradeInfo);
+        appendHidden('TradeSha', tradeSha);
+
+        document.body.appendChild(form);
+
+        // 關閉未付款訂單模態框後送出
+        hideUnpaidOrderModal();
+        form.submit();
+      } catch (err) {
+        console.error('❌ 付款流程發生錯誤:', err);
+        alert('付款流程發生錯誤，請稍後再試');
       }
     }
     

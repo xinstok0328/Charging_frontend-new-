@@ -69,6 +69,37 @@ class ReservationController extends Controller
             ];
         }
         
+        // 將外部 API 回應中的關鍵欄位寫入 Session，供後續 /statusIng 使用
+        try {
+            $data = $json['data'] ?? [];
+            $chargingBillId = $data['charging_bill_id'] ?? null;
+            $sessionId = $data['session_id'] ?? null;
+
+            // 儲存可用的識別碼
+            if ($chargingBillId) {
+                Session::put('charging_bill_id', $chargingBillId);
+            }
+            if ($sessionId) {
+                Session::put('charging_session_id', $sessionId);
+            }
+
+            // 設置充電進行中的狀態與備援 ID
+            if ($chargingBillId || $sessionId) {
+                Session::put('has_active_reservation', true);
+                Session::put('reservation_status', 'IN_PROGRESS');
+                Session::put('reservation_id', $chargingBillId ?? $sessionId);
+            }
+
+            Log::info('開始充電後已寫入 Session', [
+                'charging_bill_id' => Session::get('charging_bill_id'),
+                'charging_session_id' => Session::get('charging_session_id'),
+                'reservation_status' => Session::get('reservation_status'),
+                'reservation_id' => Session::get('reservation_id'),
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('寫入 Session 時發生例外（忽略）', ['error' => $e->getMessage()]);
+        }
+
         return response()->json($json, $status);
         
     } catch (\Throwable $e) {

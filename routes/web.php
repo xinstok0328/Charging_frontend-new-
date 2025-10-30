@@ -10,6 +10,18 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+// 地圖頁（付款完成回跳目標頁）
+Route::get('/map', function () {
+    return view('map');
+})->name('map');
+
+// 藍新金流前端回傳頁（OrderResultURL/ClientBackURL 可設定到此）
+// 收到後立即導回地圖頁
+Route::match(['GET', 'POST'], '/payment/result', function () {
+    // 可在此驗簽/記錄必要資訊後再導回
+    return redirect()->route('map');
+})->name('payment.result');
+
 // 調試頁面
 Route::get('/debug-login', function () {
     return view('debug-login');
@@ -222,7 +234,9 @@ Route::get('/user/purchase/statusIng', function () {
     
     if ($hasActiveReservation && $reservationStatus === 'IN_PROGRESS') {
         // 優先使用開始充電時保存的 charging_bill_id
-        $chargingBillId = session('charging_bill_id') ?? session('reservation_id');
+        $chargingBillId = session('charging_bill_id')
+            ?? session('reservation_id')
+            ?? session('charging_session_id'); // 補充：開始充電時也有保存 charging_session_id
     }
     
     // 如果沒有進行中的充電或沒有 charging_bill_id，使用登入時後端回傳的 session_id 作為備用
@@ -244,7 +258,9 @@ Route::get('/user/purchase/statusIng', function () {
     
     // 如果還是沒有，嘗試從 request 參數獲取（向後兼容）
     if (!$chargingBillId || $chargingBillId === 0 || $chargingBillId === '0') {
-        $chargingBillId = request('charging_bill_id') ?? request('session_id');
+        $chargingBillId = request('charging_bill_id')
+            ?? request('session_id')
+            ?? request('sessionId'); // 一些前端以 sessionId 傳遞
     }
     
     // 如果還是沒有 charging_bill_id，返回錯誤

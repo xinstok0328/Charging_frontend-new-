@@ -165,6 +165,36 @@
             margin: 10px 0;
             font-size: 16px;
         }
+
+        /* 讓結束充電按鈕固定在底部且不被動畫遮住 */
+        .footer-actions {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 16px;
+            display: flex;
+            justify-content: center;
+            padding: 0 16px;
+            z-index: 1000;
+            pointer-events: none; /* 讓容器不攔截點擊，只讓按鈕可點 */
+        }
+        .end-charge-btn {
+            pointer-events: auto;
+            background: #ef4444;
+            color: #fff;
+            border: none;
+            border-radius: 9999px;
+            padding: 12px 20px;
+            font-size: 16px;
+            font-weight: 600;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+            cursor: pointer;
+            transition: transform .1s ease, opacity .2s ease;
+        }
+        .end-charge-btn:active { transform: translateY(1px); }
+        @media (max-width: 420px) {
+            .end-charge-btn { width: 100%; }
+        }
     </style>
 </head>
 <body>
@@ -200,6 +230,11 @@
                 <span id="infoDuration">-</span>
             </div>
         </div>
+    </div>
+    
+    <!-- 固定在底部的結束充電按鈕 -->
+    <div class="footer-actions">
+        <button id="endChargeNow" class="end-charge-btn">結束充電</button>
     </div>
 
     <script>
@@ -412,6 +447,33 @@
         window.onpopstate = function () {
             history.go(1);
         };
+
+        // 結束充電按鈕事件
+        document.getElementById('endChargeNow')?.addEventListener('click', async () => {
+            try {
+                const sessionId = localStorage.getItem('chargingSessionId')
+                    || JSON.parse(localStorage.getItem('activeReservation') || '{}').id
+                    || 0;
+                const resp = await fetch('/user/purchase/end', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ session_id: Number(sessionId) || 0 })
+                });
+                const json = await resp.json().catch(() => ({}));
+                if (!resp.ok || json?.success === false) {
+                    alert('結束充電失敗，請稍後重試');
+                    return;
+                }
+                // 成功後導回地圖或付款流程由其他頁面處理
+                window.location.href = '/map';
+            } catch (e) {
+                console.error('結束充電失敗', e);
+                alert('結束充電失敗，請稍後重試');
+            }
+        });
     </script>
 </body>
 </html>
