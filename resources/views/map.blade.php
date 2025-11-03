@@ -296,21 +296,29 @@
     
     .button-group {
       display: flex;
+      flex-direction: column;
       gap: 10px;
-      align-items: flex-end;
-      flex-wrap: wrap;
+      justify-content: flex-end;
+      min-width: 150px;
+    }
+    
+    .button-group::before {
+      content: '';
+      height: 25px;
+      display: block;
     }
     
     .station-btn {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
-      padding: 10px 20px;
+      padding: 8px 20px;
       border: none;
       border-radius: 5px;
       cursor: pointer;
       font-size: 14px;
       font-weight: 600;
       transition: transform 0.2s, box-shadow 0.2s;
+      box-sizing: border-box;
     }
     
     .station-btn:hover {
@@ -731,19 +739,19 @@
       <input type="number" id="search-distance" value="10" min="1" max="100" placeholder="預設10公里">
     </div>
     
-    <div class="form-group">
+    <!-- <div class="form-group">
       <label for="station-id">特定站點ID</label>
       <input type="number" id="station-id" placeholder="可選">
-    </div>
+    </div> -->
     
-    <div class="form-group">
+    <!-- <div class="form-group">
       <label for="pile-id">充電樁ID</label>
       <input type="number" id="pile-id" placeholder="用於費率查詢" value="6">
-    </div>
+    </div> -->
     
     <div class="button-group">
       <button onclick="loadNearbyStations()" class="station-btn">載入附近充電站</button>
-      <button onclick="loadAllStations()" class="station-btn secondary">載入所有充電站</button>
+      <!-- <button onclick="loadAllStations()" class="station-btn secondary">載入所有充電站</button> -->
     </div>
   </div>
 
@@ -1167,8 +1175,8 @@
       // session_id 由後端 session 管理，不再需要清除 localStorage
       const sEl = document.getElementById('sessionId');
       if (sEl) sEl.textContent = '-';
-      const billEl = document.getElementById('chargingBillId');
-      if (billEl) billEl.textContent = '-';
+      // const billEl = document.getElementById('chargingBillId');
+      // if (billEl) billEl.textContent = '-';
       console.log('✅ 充電會話數據已清除');
     }
     
@@ -1224,11 +1232,11 @@
       }
 
       // 更新帳單ID（若有）
-      const billEl = document.getElementById('chargingBillId');
-      if (billEl) {
-        const billIdToShow = chargingSession.charging_bill_id;
-        billEl.textContent = billIdToShow || '-';
-      }
+      // const billEl = document.getElementById('chargingBillId');
+      // if (billEl) {
+      //   const billIdToShow = chargingSession.charging_bill_id;
+      //   billEl.textContent = billIdToShow || '-';
+      // }
       
       return {
         hasStoredSession: !!storedSessionId,
@@ -1974,6 +1982,22 @@
       if (payUnpaidOrderBtn) {
         payUnpaidOrderBtn.addEventListener('click', payUnpaidOrder);
       }
+      
+      // 無未付款訂單提示視窗事件
+      const closeNoUnpaidOrderBtn = document.getElementById('closeNoUnpaidOrderBtn');
+      if (closeNoUnpaidOrderBtn) {
+        closeNoUnpaidOrderBtn.addEventListener('click', hideNoUnpaidOrderModal);
+      }
+      
+      // 點擊背景關閉無未付款訂單提示視窗
+      const noUnpaidOrderBackdrop = document.getElementById('noUnpaidOrderBackdrop');
+      if (noUnpaidOrderBackdrop) {
+        noUnpaidOrderBackdrop.addEventListener('click', function(e) {
+          if (e.target === this) {
+            hideNoUnpaidOrderModal();
+          }
+        });
+      }
     }
 
     // 顯示充電畫面
@@ -2122,15 +2146,15 @@
       }
       
       // 更新帳單ID - 使用 charging_bill_id（與 pile_id 不同）
-      const billEl = document.getElementById('chargingBillId');
-      if (billEl) {
-        const billIdToShow = chargingSession.charging_bill_id;
-        if (billIdToShow !== undefined && billIdToShow !== null && billIdToShow !== 0) {
-          billEl.textContent = billIdToShow;
-        } else {
-          billEl.textContent = '-';
-        }
-      }
+      // const billEl = document.getElementById('chargingBillId');
+      // if (billEl) {
+      //   const billIdToShow = chargingSession.charging_bill_id;
+      //   if (billIdToShow !== undefined && billIdToShow !== null && billIdToShow !== 0) {
+      //     billEl.textContent = billIdToShow;
+      //   } else {
+      //     billEl.textContent = '-';
+      //   }
+      // }
       
       // 獲取實際使用的會話ID - 只從 chargingSession 獲取
       const actualSessionId = chargingSession.session_id;
@@ -2273,18 +2297,18 @@
             const sEl = document.getElementById('sessionId');
             if (sEl) sEl.textContent = chargingSession.session_id || '-';
             
-            const billEl = document.getElementById('chargingBillId');
-            if (billEl) {
-              // 檢查 charging_bill_id 是否存在且不為 0
-              const billId = chargingSession.charging_bill_id;
-              if (billId !== undefined && billId !== null && billId !== 0) {
-                billEl.textContent = billId;
-                console.log('✅ 帳單ID已更新到畫面:', billId);
-              } else {
-                billEl.textContent = '-';
-                console.warn('⚠️ 帳單ID不存在或為0，顯示為 "-"');
-              }
-            }
+            // const billEl = document.getElementById('chargingBillId');
+            // if (billEl) {
+            //   // 檢查 charging_bill_id 是否存在且不為 0
+            //   const billId = chargingSession.charging_bill_id;
+            //   if (billId !== undefined && billId !== null && billId !== 0) {
+            //     billEl.textContent = billId;
+            //     console.log('✅ 帳單ID已更新到畫面:', billId);
+            //   } else {
+            //     billEl.textContent = '-';
+            //     console.warn('⚠️ 帳單ID不存在或為0，顯示為 "-"');
+            //   }
+            // }
             
             // 計算預約時長（分鐘）
             const reservationStartTime = new Date(data.start_time);
@@ -2918,9 +2942,13 @@
                });
              }
              
-             // 可以在此處添加顯示帳單詳情的邏輯
-             if (paymentStatus === 'UNPAID') {
-               console.log('⚠️ 請注意：此充電尚未付款，請盡快完成付款');
+             // 如果未付款，自動顯示未付款訂單
+             if (paymentStatus === 'UNPAID' && chargingBillId) {
+               console.log('⚠️ 請注意：此充電尚未付款，自動顯示未付款訂單');
+               // 延遲一下顯示，確保充電模態框已關閉
+               setTimeout(() => {
+                 viewUnpaidBill(chargingBillId, null);
+               }, 500);
              }
            }
            
@@ -3575,13 +3603,13 @@ async function loadRateData() {
           const user = data.data;
           userInfoHtml = `
             <table class="user-info-table">
-            <tr><td>用戶ID:</td><td>${user.id || 'N/A'}</td></tr>
+            <!-- <tr><td>用戶ID:</td><td>${user.id || 'N/A'}</td></tr> -->
             <tr><td>帳號:</td><td>${user.account || 'N/A'}</td></tr>
             <tr><td>姓名:</td><td>${user.name || 'N/A'}</td></tr>
             <tr><td>電子郵件:</td><td>${user.email || 'N/A'}</td></tr>
             <tr><td>手機:</td><td>${user.phone || 'N/A'}</td></tr>
-            <tr><td>角色名稱:</td><td>${user.role_name || 'N/A'}</td></tr>
-            <tr><td>角色代碼:</td><td>${user.role_code || 'N/A'}</td></tr>
+            <!-- <tr><td>角色名稱:</td><td>${user.role_name || 'N/A'}</td></tr> -->
+            <!-- <tr><td>角色代碼:</td><td>${user.role_code || 'N/A'}</td></tr> -->
             <tr><td>建立時間:</td><td>${user.create_time || 'N/A'}</td></tr>
             <tr><td>修改時間:</td><td>${user.modify_time || 'N/A'}</td></tr>
             </table>
@@ -3935,6 +3963,32 @@ async function loadRateData() {
 
     // 頁面載入完成後初始化
     document.addEventListener('DOMContentLoaded', function() {
+      // ✅ 檢測付款成功後自動跳轉
+      const urlParams = new URLSearchParams(window.location.search);
+      const tradeStatus = urlParams.get('TradeStatus');
+      const status = urlParams.get('Status');
+      
+      // 檢測藍新金流付款成功回傳
+      if (tradeStatus === 'SUCCESS' || status === 'SUCCESS' || urlParams.get('payment_success') === '1') {
+        console.log('✅ 檢測到付款成功，已自動跳轉到地圖頁面');
+        
+        // 顯示付款成功訊息
+        if (typeof showSuccess === 'function') {
+          showSuccess('付款成功！感謝您的使用！');
+        } else {
+          alert('付款成功！感謝您的使用！');
+        }
+        
+        // 清除 URL 參數，避免重複顯示
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+        
+        // 刷新地圖標記（確保狀態更新）
+        setTimeout(() => {
+          loadMapMarkers();
+        }, 500);
+      }
+      
       initializeCSRFToken();
        // ✅ 添加：檢查 token 有效性
   const token = localStorage.getItem('auth_token');
@@ -5079,7 +5133,18 @@ function saveAuthToken(token) {
                         
                         // 保存 session_id 用於後續處理
                         const completedSessionId = result.data?.session_id || sessionId;
+                        const chargingBillId = result.data?.charging_bill_id;
+                        const paymentStatus = result.data?.payment_status;
+                        
                         console.log('💾 保存的 session_id:', completedSessionId);
+                        console.log('💾 充電帳單 ID:', chargingBillId);
+                        console.log('💳 付款狀態:', paymentStatus);
+                        
+                        // 保存 charging_bill_id 到 localStorage（如果後端有回傳）
+                        if (chargingBillId) {
+                          localStorage.setItem('charging_bill_id', chargingBillId);
+                          console.log('💾 charging_bill_id 已保存到 localStorage:', chargingBillId);
+                        }
                         
                         // 清空充電會話
                         chargingSession = null;
@@ -5089,6 +5154,15 @@ function saveAuthToken(token) {
                         document.getElementById('myresv-backdrop').style.display = 'none';
                         document.getElementById('myresv-modal').style.display = 'none';
                         stopMyResvPolling();
+                        
+                        // 如果未付款，自動顯示未付款訂單
+                        if (paymentStatus === 'UNPAID' && chargingBillId) {
+                          console.log('⚠️ 請注意：此充電尚未付款，自動顯示未付款訂單');
+                          // 延遲一下顯示，確保其他模態框已關閉
+                          setTimeout(() => {
+                            viewUnpaidBill(chargingBillId, null);
+                          }, 500);
+                        }
                         
                         // 顯示成功訊息 (已移除 alert)
                         
@@ -5308,7 +5382,7 @@ function saveAuthToken(token) {
             errEl.textContent = (json && json.message) ? json.message : '目前沒有預約';
           }
         } catch (e) {
-          errEl.textContent = '讀取失敗';
+          // errEl.textContent = '讀取失敗';
         }
       }
 
@@ -5666,11 +5740,17 @@ function saveAuthToken(token) {
             console.log('💳 支付交易資訊:', bill.payment_transaction_responses);
           }
         } else {
-          // 如果回傳「未結清」訊息，顯示未付款
-          if (data && data.message && data.message.includes('未結清')) {
+          // 檢測是否有未付款訂單的特定情況
+          // 如果 API 回傳沒有未付款訂單（success 為 false 或 data 為 null）
+          if (response.ok && data && (!data.success || !data.data || data.data === null)) {
+            // 顯示「目前無未付款訂單」小視窗
+            showNoUnpaidOrderModal();
+          } else if (data && data.message && data.message.includes('未結清')) {
+            // 如果回傳「未結清」訊息，顯示未付款
             alert('此訂單尚有未結清款項');
           } else {
-            alert(data?.message || '此訂單已結清或無需付款');
+            // 其他情況顯示「目前無未付款訂單」小視窗
+            showNoUnpaidOrderModal();
           }
         }
       } catch (error) {
@@ -5727,6 +5807,26 @@ function saveAuthToken(token) {
       if (modal) {
         modal.style.display = 'none';
         document.body.classList.remove('charging-modal-open');
+      }
+    }
+    
+    // 顯示無未付款訂單提示視窗
+    function showNoUnpaidOrderModal() {
+      const backdrop = document.getElementById('noUnpaidOrderBackdrop');
+      const modal = document.getElementById('noUnpaidOrderModal');
+      if (backdrop && modal) {
+        backdrop.style.display = 'block';
+        modal.style.display = 'block';
+      }
+    }
+    
+    // 隱藏無未付款訂單提示視窗
+    function hideNoUnpaidOrderModal() {
+      const backdrop = document.getElementById('noUnpaidOrderBackdrop');
+      const modal = document.getElementById('noUnpaidOrderModal');
+      if (backdrop && modal) {
+        backdrop.style.display = 'none';
+        modal.style.display = 'none';
       }
     }
     
@@ -5824,6 +5924,8 @@ function saveAuthToken(token) {
     window.viewUnpaidOrderFromStorage = viewUnpaidOrderFromStorage;
     window.showUnpaidOrderModal = showUnpaidOrderModal;
     window.hideUnpaidOrderModal = hideUnpaidOrderModal;
+    window.showNoUnpaidOrderModal = showNoUnpaidOrderModal;
+    window.hideNoUnpaidOrderModal = hideNoUnpaidOrderModal;
     window.payUnpaidOrder = payUnpaidOrder;
     window.checkPaymentStatus = checkPaymentStatus;
     
@@ -6985,10 +7087,10 @@ function saveAuthToken(token) {
           <span class="session-label">會話ID</span>
           <span id="sessionId" class="session-value">-</span>
           </div>
-        <div class="session-info">
+        <!-- <div class="session-info">
           <span class="session-label">帳單ID</span>
           <span id="chargingBillId" class="session-value">-</span>
-          </div>
+          </div> -->
         </div>
         
       <!-- 底部結束充電按鈕 -->
@@ -7144,6 +7246,19 @@ function saveAuthToken(token) {
           </button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- 無未付款訂單提示視窗 -->
+  <div id="noUnpaidOrderBackdrop" class="reservation-modal-backdrop" style="position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: none; z-index: 1006;"></div>
+  <div id="noUnpaidOrderModal" class="success-modal" role="dialog" aria-modal="true" style="position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); background: #fff; border-radius: 12px; box-shadow: 0 15px 35px rgba(0,0,0,0.2); width: 380px; max-width: calc(100% - 32px); display: none; z-index: 1007;">
+    <div style="padding: 24px; text-align: center;">
+      <div style="font-size: 48px; margin-bottom: 16px;">📋</div>
+      <h3 style="margin: 0 0 12px 0; font-size: 20px; color: #2d3748; font-weight: 600;">目前無未付款訂單</h3>
+      <p style="margin: 0 0 24px 0; font-size: 14px; color: #718096;">目前沒有任何未付款的訂單</p>
+      <button id="closeNoUnpaidOrderBtn" style="width: 100%; padding: 12px 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;">
+        確定
+      </button>
     </div>
   </div>
 

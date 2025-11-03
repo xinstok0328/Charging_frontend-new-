@@ -19,7 +19,17 @@ Route::get('/map', function () {
 // 收到後立即導回地圖頁
 Route::match(['GET', 'POST'], '/payment/result', function () {
     // 可在此驗簽/記錄必要資訊後再導回
-    return redirect()->route('map');
+    // 檢測付款狀態參數
+    $tradeStatus = request()->input('TradeStatus', request()->input('Status'));
+    $paymentSuccess = ($tradeStatus === 'SUCCESS' || request()->input('payment_success') === '1') ? '1' : null;
+    
+    if ($paymentSuccess) {
+        // 付款成功，帶上參數跳轉到地圖頁
+        return redirect()->route('map', ['payment_success' => '1']);
+    } else {
+        // 一般情況下直接跳轉到地圖頁
+        return redirect()->route('map');
+    }
 })->name('payment.result');
 
 // 調試頁面

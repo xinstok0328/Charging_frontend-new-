@@ -126,8 +126,20 @@ class TariffController extends Controller
                 'source' => 'session'
             ]);
 
-            // Call external API
-            $tariffData = $this->callExternalTariffAPI($userId, $userTierId, $pileId);
+            // Get user's session token for external API call
+            $sessionToken = Session::get('auth_token');
+            if (!$sessionToken) {
+                Log::warning('Tariff query failed: No auth token in session');
+                return response()->json([
+                    'success' => false,
+                    'code' => 401,
+                    'message' => 'Authentication token missing',
+                    'data' => null
+                ], 401);
+            }
+
+            // Call external API with user's session token
+            $tariffData = $this->callExternalTariffAPI($userId, $userTierId, $pileId, $sessionToken);
 
             if (!$tariffData) {
                 return response()->json([
@@ -164,7 +176,7 @@ class TariffController extends Controller
     /**
      * Call external tariff API
      */
-    private function callExternalTariffAPI(int $userId, int $userTierId, int $pileId): ?array
+    private function callExternalTariffAPI(int $userId, int $userTierId, int $pileId, string $userToken): ?array
     {
         try {
             // External API configuration
@@ -185,13 +197,12 @@ class TariffController extends Controller
                 'params' => $queryParams
             ]);
             
-            // 發送 HTTP 請求到外部 API
+            // 發送 HTTP 請求到外部 API - 使用用戶的 session token
             $response = Http::timeout($apiTimeout)
                 ->withHeaders([
                     'Accept' => 'application/json',
                     'Content-Type' => 'application/json',
-                    'Authorization' => 'Bearer ' . config('services.tariff_api.token'),
-                    'X-API-Key' => config('services.tariff_api.token'),
+                    'Authorization' => 'Bearer ' . $userToken,
                 ])
                 ->get($externalApiUrl . $apiPath, $queryParams);
             
@@ -241,7 +252,9 @@ class TariffController extends Controller
                 'trace' => $e->getTraceAsString(),
                 'user_id' => $userId,
                 'user_tier_id' => $userTierId,
-                'pile_id' => $pileId
+                'pile_id' => $pileId,
+                'has_token' => !empty($userToken),
+                'token_length' => strlen($userToken ?? '')
             ]);
             return null;
         }
