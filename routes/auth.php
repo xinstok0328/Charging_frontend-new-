@@ -31,10 +31,16 @@ Route::middleware('guest')->group(function () {
     Route::get('/register', [RegisteredUserController::class, 'create'])->name('register');
     Route::post('/register', [RegisteredUserController::class, 'store']);
 
-    // 忘記密碼相關路由
+    // 忘記密碼相關路由（直接導向重置密碼頁面）
     Route::get('/forgot-password', function () {
-        return view('auth.forgot-password');
+        return view('auth.reset-password');
     })->name('password.request');
+    
+    // 重置密碼頁面（顯示輸入驗證碼和新密碼的表單）
+    Route::get('/reset-password', function () {
+        return view('auth.reset-password');
+    })->name('password.reset');
+    
     Route::post('/reset-password', [NewPasswordController::class, 'store'])->name('password.store');
 
     // 首頁

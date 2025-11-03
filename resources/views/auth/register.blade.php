@@ -38,7 +38,7 @@
         </div>
 
        {{-- 驗證碼欄位區 --}}
-        <div class="mt-3 flex items-center gap-2">
+        <div class="mt-3 flex items-start gap-2">
             <input
                 id="verifyCode"
                 type="text"
@@ -46,20 +46,24 @@
                 class="border rounded p-2 w-full"
                 placeholder="輸入收到的驗證碼"
         >
-        <button
-            id="getCodeBtn"
-            type="button"
-            class="px-3 py-2 bg-blue-500 text-white rounded"
-        >
-            取得驗證碼
-        </button>
-        <button
-            id="checkCodeBtn"
-            type="button"
-            class="px-3 py-2 bg-gray-500 text-white rounded"
-        >
-            確認驗證碼
-        </button>
+        <div class="flex flex-col gap-2 flex-shrink-0">
+            <button
+                id="getCodeBtn"
+                type="button"
+                class="px-3 py-2 bg-blue-500 text-white rounded whitespace-nowrap text-center"
+                style="min-width: 140px; width: 140px;"
+            >
+                取得驗證碼
+            </button>
+            <button
+                id="checkCodeBtn"
+                type="button"
+                class="px-3 py-2 bg-gray-500 text-white rounded whitespace-nowrap text-center"
+                style="min-width: 140px; width: 140px;"
+            >
+                確認驗證碼
+            </button>
+        </div>
     </div>
 
     {{-- 驗證結果訊息 --}}
@@ -160,7 +164,7 @@
                     'Accept': '*/*'
                 },
                 body: JSON.stringify({
-                    account: email,  // 使用 email 作為 account
+                    account: account,  // 使用 email 作為 account
                     password: password,
                     name: name,
                     email: email,
@@ -277,11 +281,16 @@
                 if (res.ok && (data?.success === true || data?.code === 20000)) {
                     msgDiv.innerHTML = `<span class="text-green-500">${data?.message || '驗證碼已寄出，請到信箱查收！'}</span>`;
                     
-                    // 開始倒數計時
+                    // 開始倒數計時（使用固定格式避免跳動）
                     let left = 60;
                     const orig = getCodeBtn.textContent;
                     const timer = setInterval(() => {
-                        getCodeBtn.textContent = `${left}s 後可再發送`;
+                        // 使用固定格式，確保文字長度一致（使用全形空格填充單數秒數）
+                        if (left >= 10) {
+                            getCodeBtn.textContent = `${left}s 後可再發送`;
+                        } else {
+                            getCodeBtn.textContent = ` ${left}s 後可再發送`;
+                        }
                         left--;
                         if (left < 0) {
                             clearInterval(timer);
@@ -394,11 +403,18 @@
                             document.getElementById('email').readOnly = true;
                             document.getElementById('verifyCode').readOnly = true;
                             document.getElementById('checkCodeBtn').disabled = true;
+                            
+                            // 隱藏取得驗證碼按鈕
+                            const getCodeBtn = document.getElementById('getCodeBtn');
+                            if (getCodeBtn) {
+                                getCodeBtn.style.display = 'none';
+                            }
+                            
                             success = true;
                             break;
                     } else {
                             console.log(`${method.name} 失敗:`, res.status, data);
-                            lastError = data?.message || `HTTP ${res.status}`;
+                            lastError = data?.message || '驗證碼錯誤，請重新輸入';
                         }
                     } catch (err) {
                         console.log(`${method.name} 錯誤:`, err);
@@ -445,6 +461,7 @@ function clearForm() {
     if (getCodeBtn) {
         getCodeBtn.disabled = false;
         getCodeBtn.textContent = '取得驗證碼';
+        getCodeBtn.style.display = ''; // 恢復顯示
     }
     if (checkCodeBtn) {
         checkCodeBtn.disabled = false;
