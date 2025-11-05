@@ -667,7 +667,7 @@
         
         <div class="data-item">
           <div class="data-label">服務費</div>
-          <div class="data-value currency-value" id="serviceFee">載入中...</div>
+          <div class="data-value" id="serviceFee">載入中...</div>
         </div>
         
         <div class="data-item">
@@ -694,12 +694,45 @@
     </div>
   </div>
 
+  <!-- 會員等級 Modal -->
+  <div id="membership-backdrop" class="membership-modal-backdrop" style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; z-index: 1006;"></div>
+  <div id="membership-modal" class="membership-modal" role="dialog" aria-modal="true" style="position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); background: #fff; border-radius: 20px; box-shadow: 0 25px 50px rgba(0,0,0,0.2); width: 800px; max-width: calc(100% - 32px); max-height: 90vh; overflow-y: auto; display: none; z-index: 1007;">
+    <!-- Header -->
+    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; text-align: center; position: sticky; top: 0; z-index: 10;">
+      <h2 style="margin: 0; font-size: 24px; font-weight: 600;">會員等級</h2>
+      <button id="closeMembershipBtn" class="close-btn" style="position: absolute; top: 15px; right: 15px; background: rgba(255,255,255,0.2); border: none; color: white; font-size: 24px; width: 35px; height: 35px; border-radius: 50%; cursor: pointer; transition: all 0.3s;">&times;</button>
+    </div>
+    
+    <!-- Body -->
+    <div style="padding: 30px;">
+      <!-- 目前會員等級 -->
+      <div style="background: linear-gradient(135deg, #f0f4ff 0%, #e8edff 100%); border-radius: 12px; padding: 20px; margin-bottom: 30px; border: 2px solid #667eea;">
+        <div style="font-size: 14px; color: #667eea; font-weight: 600; margin-bottom: 8px;">目前會員等級</div>
+        <div id="currentTierName" style="font-size: 24px; font-weight: 700; color: #667eea;">載入中...</div>
+      </div>
+      
+      <!-- 會員方案列表 -->
+      <div id="tiersList" style="display: grid; gap: 20px;">
+        <!-- 方案卡片將由JavaScript動態生成 -->
+        <div style="text-align: center; padding: 40px; color: #999;">
+          載入中...
+        </div>
+      </div>
+      
+      <!-- 錯誤訊息 -->
+      <div id="membershipError" style="color: #e53e3e; font-size: 14px; text-align: center; margin-top: 20px; display: none;"></div>
+    </div>
+  </div>
+
   <!-- 頁面頂部控制區域 -->
   <div class="header-controls">
     <div class="header-left">
       <h2>充電站地圖定位系統</h2>
     </div>
     <div class="header-right">
+      <button onclick="showMembershipLevel()" class="control-btn btn-membership" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+        查看會員等級
+      </button>
       <button onclick="showRateInfo()" class="control-btn btn-rate-info">
         費率資訊
       </button>
@@ -903,43 +936,6 @@
         <button id="resvlist-close" class="btn btn-secondary" style="padding:4px 8px;border:none;border-radius:6px;">關閉</button>
       </header>
       
-      <!-- 篩選區域 -->
-      <div style="padding:16px;border-bottom:1px solid #eee;background:#f8f9fa;flex-shrink:0;">
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px;">
-          <div>
-            <label style="display:block;font-size:12px;color:#4a5568;margin-bottom:4px;">狀態</label>
-            <select id="filter-status" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
-              <option value="">全部</option>
-              <option value="RESERVED">已預約</option>
-              <option value="IN_PROGRESS">進行中</option>
-              <option value="COMPLETED">已完成</option>
-              <option value="CANCELED">已取消</option>
-            </select>
-          </div>
-          <div>
-            <label style="display:block;font-size:12px;color:#4a5568;margin-bottom:4px;">開始時間</label>
-            <input type="datetime-local" id="filter-start-time" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;" />
-          </div>
-          <div>
-            <label style="display:block;font-size:12px;color:#4a5568;margin-bottom:4px;">結束時間</label>
-            <input type="datetime-local" id="filter-end-time" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;" />
-          </div>
-          <div>
-            <label style="display:block;font-size:12px;color:#4a5568;margin-bottom:4px;">每頁顯示</label>
-            <select id="filter-limit" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
-              <option value="10" selected>10 筆</option>
-              <option value="20">20 筆</option>
-              <option value="50">50 筆</option>
-              <option value="100">100 筆</option>
-            </select>
-          </div>
-        </div>
-        <div style="display:flex;gap:8px;justify-content:flex-end;">
-          <button id="btn-filter-apply" style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;">套用篩選</button>
-          <button id="btn-filter-reset" style="background:#e2e8f0;color:#2d3748;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;">重設</button>
-        </div>
-      </div>
-      
       <div style="flex:1;overflow-y:auto;">
         <div id="resvlist-list" style="display:flex;flex-direction:column;gap:10px;padding:16px;"></div>
         <div id="resvlist-error" style="color:#d63031;font-size:12px;min-height:16px;margin:0 16px;"></div>
@@ -1097,6 +1093,7 @@
     
     // 充電相關變數
     let chargingTimer = null;
+    let amountUpdateTimer = null; // 金額更新計時器（每10秒調用API）
     let chargingSession = null;
     let startTime = null;
     
@@ -1367,6 +1364,11 @@
         
         // 如果已經有充電會話，直接顯示充電畫面
         if (chargingSession) {
+          // 關閉「我的預約」彈窗
+          document.getElementById('myresv-backdrop').style.display = 'none';
+          document.getElementById('myresv-modal').style.display = 'none';
+          stopMyResvPolling();
+          
           showChargingModal();
           return;
         }
@@ -1434,10 +1436,29 @@
             const statusResult = await statusResponse.json();
             console.log('📥 StatusIng API 回應:', statusResult);
             
-            if (statusResult && statusResult.success) {
+            if (statusResult && statusResult.success && statusResult.data) {
               // 使用 API 返回的真實數據
-              chargingSession = statusResult.data;
-              startTime = new Date(chargingSession.start_time);
+              // API 回傳格式: { start_time, amount, status }
+              const apiData = statusResult.data;
+              
+              // 更新 chargingSession，保留原有的其他字段
+              chargingSession = {
+                ...chargingSession,
+                start_time: apiData.start_time,
+                amount: apiData.amount || 0,
+                status: apiData.status || 'RESERVED'
+              };
+              
+              // 設定開始時間
+              if (apiData.start_time) {
+                startTime = new Date(apiData.start_time);
+                console.log('✅ 已設定開始時間:', startTime);
+              }
+              
+              // 關閉「我的預約」彈窗
+              document.getElementById('myresv-backdrop').style.display = 'none';
+              document.getElementById('myresv-modal').style.display = 'none';
+              stopMyResvPolling();
               
               showChargingModal();
               startChargingTimer();
@@ -1488,6 +1509,12 @@
             };
             
             startTime = new Date(data.start_time);
+            
+            // 關閉「我的預約」彈窗
+            document.getElementById('myresv-backdrop').style.display = 'none';
+            document.getElementById('myresv-modal').style.display = 'none';
+            stopMyResvPolling();
+            
             showChargingModal();
             startChargingTimer();
             
@@ -1719,9 +1746,23 @@
           console.log('📥 StatusIng API 回應:', statusResult);
           
           if (statusResult && statusResult.success && statusResult.data) {
-            // 使用真實的充電狀態數據
-            chargingSession = statusResult.data;
-            startTime = new Date(chargingSession.start_time);
+            // 使用 API 返回的真實數據
+            // API 回傳格式: { start_time, amount, status }
+            const apiData = statusResult.data;
+            
+            // 更新 chargingSession，保留原有的其他字段
+            chargingSession = {
+              ...chargingSession,
+              start_time: apiData.start_time,
+              amount: apiData.amount || 0,
+              status: apiData.status || 'RESERVED'
+            };
+            
+            // 設定開始時間
+            if (apiData.start_time) {
+              startTime = new Date(apiData.start_time);
+              console.log('✅ 已設定開始時間:', startTime);
+            }
             
             // ✅ 從 /user/purchase/top API 獲取預計結束時間
             console.log('📥 從 /user/purchase/top 獲取預計結束時間...');
@@ -1750,6 +1791,11 @@
             } catch (err) {
               console.warn('⚠️ 無法從 /user/purchase/top 獲取預計結束時間:', err);
             }
+            
+            // 關閉「我的預約」彈窗
+            document.getElementById('myresv-backdrop').style.display = 'none';
+            document.getElementById('myresv-modal').style.display = 'none';
+            stopMyResvPolling();
             
             // 顯示充電畫面
             showChargingModal();
@@ -2000,6 +2046,25 @@
       }
     }
 
+    // 設置會員等級相關事件監聽器
+    function setupMembershipEventListeners() {
+      // 關閉會員等級按鈕
+      const closeMembershipBtn = document.getElementById('closeMembershipBtn');
+      if (closeMembershipBtn) {
+        closeMembershipBtn.addEventListener('click', hideMembershipLevel);
+      }
+      
+      // 點擊背景關閉會員等級modal
+      const membershipBackdrop = document.getElementById('membership-backdrop');
+      if (membershipBackdrop) {
+        membershipBackdrop.addEventListener('click', function(e) {
+          if (e.target === this) {
+            hideMembershipLevel();
+          }
+        });
+      }
+    }
+
     // 顯示充電畫面
     function showChargingModal() {
       const modal = document.getElementById('chargingModal');
@@ -2032,6 +2097,9 @@
       
       chargingTimer = setInterval(updateChargingInfo, 1000);
       updateChargingInfo(); // 立即更新一次
+      
+      // 啟動金額更新計時器（每10秒調用API）
+      startAmountUpdateTimer();
     }
 
     // 停止充電計時器
@@ -2039,6 +2107,108 @@
       if (chargingTimer) {
         clearInterval(chargingTimer);
         chargingTimer = null;
+      }
+      
+      // 停止金額更新計時器
+      stopAmountUpdateTimer();
+    }
+    
+    // 啟動金額更新計時器（每10秒調用API）
+    async function startAmountUpdateTimer() {
+      // 先清除現有的計時器
+      if (amountUpdateTimer) {
+        clearInterval(amountUpdateTimer);
+      }
+      
+      // 立即調用一次
+      await updateAmountFromAPI();
+      
+      // 每10秒調用一次
+      amountUpdateTimer = setInterval(async () => {
+        await updateAmountFromAPI();
+      }, 10000); // 10000毫秒 = 10秒
+    }
+    
+    // 停止金額更新計時器
+    function stopAmountUpdateTimer() {
+      if (amountUpdateTimer) {
+        clearInterval(amountUpdateTimer);
+        amountUpdateTimer = null;
+      }
+    }
+    
+    // 從API更新目前金額
+    async function updateAmountFromAPI() {
+      if (!chargingSession) {
+        console.warn('⚠️ 沒有充電會話，無法更新金額');
+        return;
+      }
+      
+      try {
+        const authToken = localStorage.getItem('auth_token');
+        if (!authToken) {
+          console.warn('⚠️ 沒有認證令牌，無法調用API');
+          return;
+        }
+        
+        const sessionId = chargingSession.session_id || chargingSession.id;
+        if (!sessionId) {
+          console.warn('⚠️ 沒有會話ID，無法調用API');
+          return;
+        }
+        
+        const statusUrl = `http://120.110.115.126:18081/user/purchase/status_ing?session_id=${sessionId}&sessionId=${sessionId}`;
+        
+        console.log('💰 調用 status_ing API 更新金額...');
+        
+        const statusResponse = await fetch(statusUrl, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          },
+          mode: 'cors'
+        });
+        
+        if (statusResponse.ok) {
+          const statusResult = await statusResponse.json();
+          
+          if (statusResult && statusResult.success && statusResult.data) {
+            const apiData = statusResult.data;
+            
+            // 更新 chargingSession 中的 amount
+            if (apiData.amount !== undefined && apiData.amount !== null) {
+              chargingSession.amount = apiData.amount;
+              
+              // 更新畫面上的金額顯示
+              const currentAmountEl = document.getElementById('currentAmount');
+              if (currentAmountEl) {
+                currentAmountEl.textContent = `$${Number(apiData.amount).toFixed(2)}`;
+                console.log('✅ 金額已從API更新:', `$${Number(apiData.amount).toFixed(2)}`);
+              }
+              
+              // 同時更新 start_time 和 status（如果API有回傳）
+              if (apiData.start_time) {
+                chargingSession.start_time = apiData.start_time;
+                if (startTime) {
+                  startTime = new Date(apiData.start_time);
+                }
+              }
+              if (apiData.status) {
+                chargingSession.status = apiData.status;
+              }
+            } else {
+              console.warn('⚠️ API 沒有回傳 amount');
+            }
+          } else {
+            console.warn('⚠️ API 回應格式不正確:', statusResult);
+          }
+        } else {
+          console.warn('⚠️ API 請求失敗:', statusResponse.status);
+        }
+      } catch (error) {
+        console.error('❌ 更新金額API錯誤:', error);
+        // 不中斷計時器，繼續使用計算的金額
       }
     }
 
@@ -2052,31 +2222,44 @@
       const minutes = Math.floor((elapsed % 3600) / 60);
       const seconds = elapsed % 60;
       
-      // 更新開始時間 - 顯示 localStorage 中的開始時間
+      // 更新開始時間 - 優先使用 API 回傳的 start_time
       const startTimeEl = document.getElementById('currentTime'); // 使用現有的元素ID
       if (startTimeEl) {
-        // 優先使用 chargingSession.start_time，如果沒有則從 localStorage 獲取
-        const startTimeStr = chargingSession.start_time || localStorage.getItem('charging_start_time');
-        if (startTimeStr) {
-          const startTime = new Date(startTimeStr);
-          const timeStr = startTime.toLocaleTimeString('zh-TW', { 
+        // 優先使用 chargingSession.start_time（從 API 獲取）
+        if (chargingSession && chargingSession.start_time) {
+          const apiStartTime = new Date(chargingSession.start_time);
+          const timeStr = apiStartTime.toLocaleTimeString('zh-TW', { 
             hour12: false,
             hour: '2-digit',
             minute: '2-digit',
             second: '2-digit'
           });
           startTimeEl.textContent = timeStr;
-          console.log('🕐 顯示開始時間:', timeStr, '來源:', chargingSession.start_time ? 'chargingSession' : 'localStorage');
+          console.log('🕐 顯示開始時間 (API):', timeStr);
         } else {
-          // 如果都沒有，顯示當前時間作為備用
-          const timeStr = now.toLocaleTimeString('zh-TW', { 
-            hour12: false,
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
-          });
-          startTimeEl.textContent = timeStr;
-          console.log('⚠️ 使用當前時間作為備用:', timeStr);
+          // 備用：從 localStorage 獲取
+          const startTimeStr = localStorage.getItem('charging_start_time');
+          if (startTimeStr) {
+            const startTime = new Date(startTimeStr);
+            const timeStr = startTime.toLocaleTimeString('zh-TW', { 
+              hour12: false,
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit'
+            });
+            startTimeEl.textContent = timeStr;
+            console.log('🕐 顯示開始時間 (localStorage):', timeStr);
+          } else {
+            // 最後備用：顯示當前時間
+            const timeStr = now.toLocaleTimeString('zh-TW', { 
+              hour12: false,
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit'
+            });
+            startTimeEl.textContent = timeStr;
+            console.log('⚠️ 使用當前時間作為備用:', timeStr);
+          }
         }
       }
       
@@ -2101,22 +2284,33 @@
         }
       }
       
-      // 更新充電時長 - 顯示實際充電的時長（從按下開始充電開始）
+      // 更新充電時長 - 根據 API 回傳的 start_time 計算
       const chargingDurationEl = document.getElementById('chargingDuration');
       if (chargingDurationEl) {
-        // 計算實際充電時長（從按下開始充電的實際時間到現在）
-        // 使用 startTime 變數，這是按下開始充電時設定的實際時間
-        const actualElapsed = Math.floor((now - startTime) / 1000);
-        const actualHours = Math.floor(actualElapsed / 3600);
-        const actualMinutes = Math.floor((actualElapsed % 3600) / 60);
-        const actualSeconds = actualElapsed % 60;
+        // 優先使用 API 回傳的 start_time，其次使用全局 startTime 變數
+        let chargingStartTime = null;
         
-        const durationStr = `${actualHours.toString().padStart(2, '0')}:${actualMinutes.toString().padStart(2, '0')}:${actualSeconds.toString().padStart(2, '0')}`;
-        chargingDurationEl.textContent = durationStr;
-        console.log('⏱️ 顯示充電時長:', durationStr, '實際充電秒數:', actualElapsed);
-        console.log('⏱️ 充電開始時間 (startTime):', startTime);
-        console.log('⏱️ 當前時間 (now):', now);
-        console.log('⏱️ 時差:', actualElapsed, '秒');
+        if (chargingSession && chargingSession.start_time) {
+          chargingStartTime = new Date(chargingSession.start_time);
+        } else if (startTime) {
+          chargingStartTime = startTime;
+        }
+        
+        if (chargingStartTime && chargingStartTime instanceof Date && !isNaN(chargingStartTime.getTime())) {
+          const actualElapsed = Math.floor((now - chargingStartTime) / 1000);
+          const actualHours = Math.floor(actualElapsed / 3600);
+          const actualMinutes = Math.floor((actualElapsed % 3600) / 60);
+          const actualSeconds = actualElapsed % 60;
+          
+          const durationStr = `${actualHours.toString().padStart(2, '0')}:${actualMinutes.toString().padStart(2, '0')}:${actualSeconds.toString().padStart(2, '0')}`;
+          chargingDurationEl.textContent = durationStr;
+          console.log('⏱️ 顯示充電時長:', durationStr, '實際充電秒數:', actualElapsed);
+          console.log('⏱️ 充電開始時間:', chargingStartTime);
+          console.log('⏱️ 當前時間:', now);
+        } else {
+          chargingDurationEl.textContent = '00:00:00';
+          console.log('⚠️ 無法計算充電時長，開始時間無效');
+        }
       }
       
       // 更新進度條
@@ -2128,6 +2322,50 @@
         
         progressFill.style.width = `${progress}%`;
         progressFill.textContent = `${Math.round(progress)}%`;
+      }
+      
+      // 更新目前金額 - 優先使用API回傳的amount，否則根據實時充電時長計算（每1秒更新）
+      const currentAmountEl = document.getElementById('currentAmount');
+      if (currentAmountEl && chargingSession && startTime) {
+        try {
+          // 優先使用 API 回傳的 amount（每10秒更新一次）
+          if (chargingSession.amount !== undefined && chargingSession.amount !== null) {
+            currentAmountEl.textContent = `$${Number(chargingSession.amount).toFixed(2)}`;
+          } else {
+            // 如果API還沒有回傳amount，則根據實時充電時長計算
+            const pricePerHour = chargingSession.price_per_hour || 0;
+            const serviceFeeRate = chargingSession.service_fee || 0; // 百分比
+            
+            // 計算實際充電時長
+            const chargingSeconds = Math.floor((now - startTime) / 1000);
+            const chargingHours = chargingSeconds / 3600;
+            
+            // 計算使用金額
+            const usageAmount = pricePerHour * chargingHours;
+            
+            // 計算服務費
+            let serviceFeeAmount = 0;
+            if (serviceFeeRate > 0 && serviceFeeRate <= 100) {
+              // 服務費是百分比
+              serviceFeeAmount = usageAmount * (serviceFeeRate / 100);
+            } else if (serviceFeeRate > 100) {
+              // 服務費是固定金額
+              serviceFeeAmount = serviceFeeRate;
+            }
+            
+            // 總金額 = 使用金額 + 服務費
+            const totalAmount = usageAmount + serviceFeeAmount;
+            
+            // 更新顯示（使用計算的金額）
+            currentAmountEl.textContent = `$${totalAmount.toFixed(2)}`;
+          }
+        } catch (error) {
+          console.warn('⚠️ 更新目前金額失敗:', error);
+          currentAmountEl.textContent = '$0.00';
+        }
+      } else if (currentAmountEl && !startTime) {
+        // 如果還沒有開始時間，顯示預設值
+        currentAmountEl.textContent = '$0.00';
       }
       
       // 更新會話ID - 統一使用 chargingSession.session_id（從後端 session 獲取）
@@ -2380,6 +2618,54 @@
             document.getElementById('myresv-backdrop').style.display = 'none';
             document.getElementById('myresv-modal').style.display = 'none';
             stopMyResvPolling();
+            
+            // 立即調用 status_ing API 獲取最新的充電狀態
+            console.log('🔄 調用 status_ing API 獲取充電狀態...');
+            try {
+              const sessionId = chargingSession.session_id || chargingSession.id;
+              const statusUrl = `http://120.110.115.126:18081/user/purchase/status_ing?session_id=${sessionId}&sessionId=${sessionId}`;
+              
+              console.log('📤 StatusIng 請求 URL:', statusUrl);
+              
+              const statusResponse = await fetch(statusUrl, {
+                method: 'GET',
+                headers: {
+                  'Accept': 'application/json',
+                  'Authorization': `Bearer ${authToken}`
+                },
+                mode: 'cors'
+              });
+              
+              if (statusResponse.ok) {
+                const statusResult = await statusResponse.json();
+                console.log('📥 StatusIng API 回應:', statusResult);
+                
+                if (statusResult && statusResult.success && statusResult.data) {
+                  // 更新 chargingSession 使用 API 回傳的最新數據
+                  const apiData = statusResult.data;
+                  chargingSession = {
+                    ...chargingSession,
+                    start_time: apiData.start_time || chargingSession.start_time,
+                    amount: apiData.amount || 0,
+                    status: apiData.status || chargingSession.status
+                  };
+                  
+                  // 更新開始時間
+                  if (apiData.start_time) {
+                    startTime = new Date(apiData.start_time);
+                    console.log('✅ 已從 status_ing API 更新開始時間:', startTime);
+                  }
+                  
+                  console.log('✅ 已獲取最新充電狀態:', chargingSession);
+                } else {
+                  console.warn('⚠️ StatusIng API 回應格式不正確，使用開始充電 API 的數據');
+                }
+              } else {
+                console.warn('⚠️ StatusIng API 請求失敗，使用開始充電 API 的數據');
+              }
+            } catch (statusError) {
+              console.warn('⚠️ StatusIng API 調用錯誤，使用開始充電 API 的數據:', statusError);
+            }
             
             // 顯示充電畫面
             showChargingModal();
@@ -2915,47 +3201,53 @@
              console.log('💾 charging_bill_id 已保存到 localStorage:', chargingBillId);
            }
            
-           // 顯示充電完成資訊
-           if (chargingBillId && finalAmount) {
-             console.log(`💰 充電完成！帳單編號: ${chargingBillId}, 金額: ${finalAmount} 元`);
-             
-             // 顯示充電樁資訊
-             if (pileResponse) {
-               console.log('📍 充電樁資訊:');
-               console.log('  - 型號:', pileResponse.model);
-               console.log('  - 連接器類型:', pileResponse.connector_type);
-               console.log('  - 最大功率:', pileResponse.max_kw, 'kW');
-               console.log('  - 位置:', pileResponse.location_address);
-             }
-             
-             // 顯示支付交易資訊
-             if (paymentTransactions.length > 0) {
-               console.log('💳 支付交易資訊:');
-               paymentTransactions.forEach((transaction, index) => {
-                 console.log(`  交易 ${index + 1}:`);
-                 console.log('    - 支付方式:', transaction.payment_method);
-                 console.log('    - 提供商:', transaction.provider);
-                 console.log('    - 交易ID:', transaction.provider_transaction_id);
-                 console.log('    - 金額:', transaction.amount, transaction.currency);
-                 console.log('    - 狀態:', transaction.status);
-                 console.log('    - 訊息:', transaction.message);
+           // 關閉充電模態框
+           clearChargingSession();
+           hideChargingModal();
+           
+           // 調用付款 API
+           if (chargingBillId) {
+             console.log('💳 調用付款 API...');
+             try {
+               const payResponse = await fetch('http://120.110.115.126:18081/user/purchase/pay', {
+                 method: 'POST',
+                 headers: {
+                   'Accept': 'application/json',
+                   'Authorization': `Bearer ${authToken}`
+                 },
+                 mode: 'cors'
                });
-             }
-             
-             // 如果未付款，自動顯示未付款訂單
-             if (paymentStatus === 'UNPAID' && chargingBillId) {
-               console.log('⚠️ 請注意：此充電尚未付款，自動顯示未付款訂單');
-               // 延遲一下顯示，確保充電模態框已關閉
+               
+               const payResult = await payResponse.json();
+               console.log('💳 /user/purchase/pay 回應:', payResult);
+               
+               if (payResponse.ok && payResult.success) {
+                 console.log('✅ 付款 API 調用成功');
+                 
+                 // 跳轉到未付款訂單
+                 setTimeout(() => {
+                   viewUnpaidBill(chargingBillId, null);
+                 }, 500);
+               } else {
+                 console.warn('⚠️ 付款 API 調用失敗，仍顯示未付款訂單');
+                 // 即使付款 API 失敗，也顯示未付款訂單
+                 setTimeout(() => {
+                   viewUnpaidBill(chargingBillId, null);
+                 }, 500);
+               }
+             } catch (payError) {
+               console.error('❌ 付款 API 錯誤:', payError);
+               // 即使付款 API 出錯，也顯示未付款訂單
                setTimeout(() => {
                  viewUnpaidBill(chargingBillId, null);
                }, 500);
              }
+           } else {
+             // 如果沒有 chargingBillId，直接跳轉到未付款訂單（從 localStorage 讀取）
+             setTimeout(() => {
+               viewUnpaidOrderFromStorage();
+             }, 500);
            }
-           
-           // 只有後端確認完成時才清除充電會話
-           clearChargingSession();
-           
-           hideChargingModal();
            
            // 關閉預約模態框並顯示「目前無預約」
            document.getElementById('myresv-backdrop').style.display = 'none';
@@ -3175,6 +3467,243 @@ function initializeAuthToken() {
       stopRateAutoUpdate();
     }
 
+    // === 會員等級相關功能 ===
+    
+    // 顯示會員等級Modal
+    async function showMembershipLevel() {
+      const modal = document.getElementById('membership-modal');
+      const backdrop = document.getElementById('membership-backdrop');
+      
+      modal.style.display = 'block';
+      backdrop.style.display = 'block';
+      
+      // 載入會員等級數據
+      await loadMembershipData();
+    }
+
+    // 隱藏會員等級Modal
+    function hideMembershipLevel() {
+      const modal = document.getElementById('membership-modal');
+      const backdrop = document.getElementById('membership-backdrop');
+      
+      modal.style.display = 'none';
+      backdrop.style.display = 'none';
+    }
+
+    // 載入會員等級數據
+    async function loadMembershipData() {
+      const tiersListEl = document.getElementById('tiersList');
+      const currentTierNameEl = document.getElementById('currentTierName');
+      const errorEl = document.getElementById('membershipError');
+      
+      // 重置顯示
+      errorEl.style.display = 'none';
+      tiersListEl.innerHTML = '<div style="text-align: center; padding: 40px; color: #999;">載入中...</div>';
+      currentTierNameEl.textContent = '載入中...';
+      
+      try {
+        const authToken = localStorage.getItem('auth_token');
+        if (!authToken) {
+          throw new Error('請先登入');
+        }
+
+        // 獲取tier列表
+        const listResponse = await fetch('http://120.110.115.126:18081/user/tiers/list', {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          },
+          mode: 'cors'
+        });
+
+        if (!listResponse.ok) {
+          throw new Error(`獲取會員等級列表失敗: ${listResponse.status}`);
+        }
+
+        const listResult = await listResponse.json();
+        console.log('📥 會員等級列表回應:', listResult);
+
+        if (!listResult.success || !listResult.data || !Array.isArray(listResult.data)) {
+          throw new Error('會員等級列表格式錯誤');
+        }
+
+        const tiers = listResult.data;
+        
+        // 獲取當前用戶的tier信息（從用戶資料中獲取）
+        let currentTierId = null;
+        try {
+          const userInfoResponse = await fetch('http://120.110.115.126:18081/user/info', {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json',
+              'Authorization': `Bearer ${authToken}`
+            },
+            mode: 'cors'
+          });
+          
+          if (userInfoResponse.ok) {
+            const userInfo = await userInfoResponse.json();
+            if (userInfo.success && userInfo.data && userInfo.data.tier_id) {
+              currentTierId = userInfo.data.tier_id;
+            }
+          }
+        } catch (err) {
+          console.warn('⚠️ 無法獲取當前用戶tier:', err);
+        }
+
+        // 顯示當前會員等級
+        const currentTier = tiers.find(t => t.id === currentTierId);
+        if (currentTier) {
+          currentTierNameEl.textContent = currentTier.display_name || '未知';
+        } else {
+          currentTierNameEl.textContent = tiers.length > 0 ? tiers[0].display_name : '未知';
+        }
+
+        // 渲染tier列表
+        renderTiersList(tiers, currentTierId);
+
+      } catch (error) {
+        console.error('❌ 載入會員等級錯誤:', error);
+        errorEl.textContent = error.message || '載入失敗，請稍後再試';
+        errorEl.style.display = 'block';
+        tiersListEl.innerHTML = '';
+        currentTierNameEl.textContent = '載入失敗';
+      }
+    }
+
+    // 渲染tier列表
+    function renderTiersList(tiers, currentTierId) {
+      const tiersListEl = document.getElementById('tiersList');
+      tiersListEl.innerHTML = '';
+
+      if (tiers.length === 0) {
+        tiersListEl.innerHTML = '<div style="text-align: center; padding: 40px; color: #999;">暫無會員方案</div>';
+        return;
+      }
+
+      // 按id排序
+      const sortedTiers = [...tiers].sort((a, b) => a.id - b.id);
+      
+      // 找到當前tier的索引
+      const currentIndex = sortedTiers.findIndex(t => t.id === currentTierId);
+      
+      sortedTiers.forEach((tier, index) => {
+        const isCurrent = tier.id === currentTierId;
+        const isNext = !isCurrent && (currentIndex === -1 || index === currentIndex + 1);
+        
+        const tierCard = document.createElement('div');
+        tierCard.style.cssText = `
+          background: ${isCurrent ? 'linear-gradient(135deg, #f0f4ff 0%, #e8edff 100%)' : '#fff'};
+          border: 2px solid ${isCurrent ? '#667eea' : '#e2e8f0'};
+          border-radius: 12px;
+          padding: 24px;
+          transition: all 0.3s ease;
+        `;
+        
+        if (!isCurrent) {
+          tierCard.style.cursor = 'pointer';
+          tierCard.onmouseenter = () => {
+            tierCard.style.transform = 'translateY(-4px)';
+            tierCard.style.boxShadow = '0 8px 16px rgba(0,0,0,0.1)';
+          };
+          tierCard.onmouseleave = () => {
+            tierCard.style.transform = 'translateY(0)';
+            tierCard.style.boxShadow = 'none';
+          };
+        }
+
+        const serviceFeePercent = (tier.service_fee_rate * 100).toFixed(0);
+        const priceDisplay = tier.price === 0 ? '免費' : `$${tier.price}`;
+        const durationDisplay = tier.duration_days ? `${tier.duration_days} 天` : '永久';
+
+        tierCard.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+            <div style="flex: 1;">
+              <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                <h3 style="margin: 0; font-size: 20px; font-weight: 700; color: #2d3748;">${tier.display_name}</h3>
+                ${isCurrent ? '<span style="background: #667eea; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">目前方案</span>' : ''}
+              </div>
+              <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 16px;">
+                <div>
+                  <div style="font-size: 12px; color: #718096; margin-bottom: 4px;">服務費率</div>
+                  <div style="font-size: 18px; font-weight: 700; color: #2d3748;">${serviceFeePercent}%</div>
+                </div>
+                <div>
+                  <div style="font-size: 12px; color: #718096; margin-bottom: 4px;">價格</div>
+                  <div style="font-size: 18px; font-weight: 700; color: #2d3748;">${priceDisplay}</div>
+                </div>
+                <div>
+                  <div style="font-size: 12px; color: #718096; margin-bottom: 4px;">有效期限</div>
+                  <div style="font-size: 18px; font-weight: 700; color: #2d3748;">${durationDisplay}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          ${isNext ? `
+            <div style="margin-top: 20px; text-align: center;">
+              <button onclick="subscribeToTier(${tier.id})" class="subscribe-btn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 12px 32px; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);">
+                訂閱
+              </button>
+            </div>
+          ` : ''}
+        `;
+
+        tiersListEl.appendChild(tierCard);
+      });
+    }
+
+    // 訂閱tier
+    async function subscribeToTier(tierId) {
+      if (!confirm(`確定要訂閱此會員方案嗎？`)) {
+        return;
+      }
+
+      try {
+        const authToken = localStorage.getItem('auth_token');
+        if (!authToken) {
+          alert('請先登入');
+          return;
+        }
+
+        console.log('🔄 訂閱會員方案:', tierId);
+
+        const subscribeResponse = await fetch(`http://120.110.115.126:18081/user/tiers/subscription?tierId=${tierId}`, {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          },
+          mode: 'cors'
+        });
+
+        if (!subscribeResponse.ok) {
+          const errorText = await subscribeResponse.text();
+          throw new Error(`訂閱失敗: ${subscribeResponse.status} ${errorText}`);
+        }
+
+        const subscribeResult = await subscribeResponse.json();
+        console.log('📥 訂閱回應:', subscribeResult);
+
+        if (subscribeResult.success) {
+          alert('訂閱成功！');
+          // 重新載入會員等級數據
+          await loadMembershipData();
+        } else {
+          throw new Error(subscribeResult.message || '訂閱失敗');
+        }
+
+      } catch (error) {
+        console.error('❌ 訂閱錯誤:', error);
+        alert(error.message || '訂閱失敗，請稍後再試');
+      }
+    }
+
+    // 將函數暴露到全局作用域
+    window.showMembershipLevel = showMembershipLevel;
+    window.hideMembershipLevel = hideMembershipLevel;
+    window.subscribeToTier = subscribeToTier;
+
     // 更新費率訊息框內容
     function updateRateMessageContent(apiResponse) {
       const messageBox = document.getElementById('messageBox');
@@ -3187,7 +3716,7 @@ function initializeAuthToken() {
         document.getElementById('rateName').textContent = apiResponse.data.name || 'N/A';
         document.getElementById('pricePerKwh').textContent = `${apiResponse.data.price_per_kwh || 0} ${apiResponse.data.currency || 'TWD'}`;
         document.getElementById('timeFeePerMin').textContent = `${apiResponse.data.time_fee_per_min || 0} ${apiResponse.data.currency || 'TWD'}`;
-        document.getElementById('serviceFee').textContent = `${apiResponse.data.service_fee || 0} ${apiResponse.data.currency || 'TWD'}`;
+        document.getElementById('serviceFee').textContent = `${apiResponse.data.service_fee || 0}%`;
         document.getElementById('currency').textContent = apiResponse.data.currency || 'TWD';
         document.getElementById('effectiveFrom').textContent = formatDateTime(apiResponse.data.effective_from);
         document.getElementById('effectiveTo').textContent = formatDateTime(apiResponse.data.effective_to);
@@ -4031,6 +4560,7 @@ async function loadRateData() {
       handleRegisterForm();
       setupChargingEventListeners();
       setupPaymentEventListeners();
+      setupMembershipEventListeners();
     });
 
     // 登入成功後儲存 token
@@ -5045,7 +5575,6 @@ function saveAuthToken(token) {
                 console.log('✅ 查看充電狀態按鈕存在，添加事件監聽器');
                 viewChargingBtn.addEventListener('click', async function() {
                   console.log('🎯 查看充電狀態按鈕被點擊了！');
-                  alert('查看充電狀態按鈕被點擊了！');
                   const errorElement = document.getElementById('myresv-error');
                   if (errorElement) errorElement.textContent = '';
                   
@@ -5054,6 +5583,11 @@ function saveAuthToken(token) {
                     
                     // 如果已經有充電會話，直接顯示充電畫面
                     if (chargingSession) {
+                      // 關閉「我的預約」彈窗
+                      document.getElementById('myresv-backdrop').style.display = 'none';
+                      document.getElementById('myresv-modal').style.display = 'none';
+                      stopMyResvPolling();
+                      
                       showChargingModal();
                       return;
                     }
@@ -5072,6 +5606,12 @@ function saveAuthToken(token) {
                     };
                     
                     startTime = new Date(data.start_time);
+                    
+                    // 關閉「我的預約」彈窗
+                    document.getElementById('myresv-backdrop').style.display = 'none';
+                    document.getElementById('myresv-modal').style.display = 'none';
+                    stopMyResvPolling();
+                    
                     showChargingModal();
                     startChargingTimer();
                     
@@ -5308,6 +5848,54 @@ function saveAuthToken(token) {
                       document.getElementById('myresv-backdrop').style.display = 'none';
                       document.getElementById('myresv-modal').style.display = 'none';
                       stopMyResvPolling();
+                      
+                      // 立即調用 status_ing API 獲取最新的充電狀態
+                      console.log('🔄 調用 status_ing API 獲取充電狀態...');
+                      try {
+                        const sessionId = chargingSession.session_id || chargingSession.id;
+                        const statusUrl = `http://120.110.115.126:18081/user/purchase/status_ing?session_id=${sessionId}&sessionId=${sessionId}`;
+                        
+                        console.log('📤 StatusIng 請求 URL:', statusUrl);
+                        
+                        const statusResponse = await fetch(statusUrl, {
+                          method: 'GET',
+                          headers: {
+                            'Accept': 'application/json',
+                            'Authorization': `Bearer ${authToken}`
+                          },
+                          mode: 'cors'
+                        });
+                        
+                        if (statusResponse.ok) {
+                          const statusResult = await statusResponse.json();
+                          console.log('📥 StatusIng API 回應:', statusResult);
+                          
+                          if (statusResult && statusResult.success && statusResult.data) {
+                            // 更新 chargingSession 使用 API 回傳的最新數據
+                            const apiData = statusResult.data;
+                            chargingSession = {
+                              ...chargingSession,
+                              start_time: apiData.start_time || chargingSession.start_time,
+                              amount: apiData.amount || 0,
+                              status: apiData.status || chargingSession.status
+                            };
+                            
+                            // 更新開始時間
+                            if (apiData.start_time) {
+                              startTime = new Date(apiData.start_time);
+                              console.log('✅ 已從 status_ing API 更新開始時間:', startTime);
+                            }
+                            
+                            console.log('✅ 已獲取最新充電狀態:', chargingSession);
+                          } else {
+                            console.warn('⚠️ StatusIng API 回應格式不正確，使用開始充電 API 的數據');
+                          }
+                        } else {
+                          console.warn('⚠️ StatusIng API 請求失敗，使用開始充電 API 的數據');
+                        }
+                      } catch (statusError) {
+                        console.warn('⚠️ StatusIng API 調用錯誤，使用開始充電 API 的數據:', statusError);
+                      }
                       
                       // 顯示充電畫面
                       showChargingModal();
@@ -5928,35 +6516,6 @@ function saveAuthToken(token) {
     window.hideNoUnpaidOrderModal = hideNoUnpaidOrderModal;
     window.payUnpaidOrder = payUnpaidOrder;
     window.checkPaymentStatus = checkPaymentStatus;
-    
-    // 篩選按鈕事件
-    document.getElementById('btn-filter-apply').addEventListener('click', async () => {
-      const status = document.getElementById('filter-status').value;
-      const startTime = document.getElementById('filter-start-time').value;
-      const endTime = document.getElementById('filter-end-time').value;
-      const limit = document.getElementById('filter-limit').value;
-      
-      currentFilters = {
-        status: status || undefined,
-        start_time: startTime || undefined,
-        end_time: endTime || undefined,
-        limit: limit
-      };
-      
-      currentPage = 1;
-      await loadReservationList(1, currentFilters);
-    });
-    
-    document.getElementById('btn-filter-reset').addEventListener('click', () => {
-      document.getElementById('filter-status').value = '';
-      document.getElementById('filter-start-time').value = '';
-      document.getElementById('filter-end-time').value = '';
-      document.getElementById('filter-limit').value = '10';
-      
-      currentFilters = {};
-      currentPage = 1;
-      loadReservationList(1, currentFilters);
-    });
     
     // 關閉按鈕事件
     document.getElementById('resvlist-close').addEventListener('click', () => {
@@ -6972,14 +7531,17 @@ function saveAuthToken(token) {
     }
 
     .time-display {
-      display: flex;
-      justify-content: space-between;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 15px;
       margin-bottom: 20px;
     }
 
     .time-item {
       text-align: center;
-      flex: 1;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.6);
+      border-radius: 8px;
     }
 
     .time-label {
@@ -6996,6 +7558,11 @@ function saveAuthToken(token) {
       font-size: 18px;
       font-weight: 700;
       font-family: 'Courier New', monospace;
+    }
+
+    #currentAmount {
+      color: #059669;
+      font-size: 20px;
     }
 
     .session-info {
@@ -7022,7 +7589,7 @@ function saveAuthToken(token) {
     }
 
     .charging-actions {
-      padding: 20px;
+      padding: 20px 30px 30px;
       text-align: center;
     }
 
@@ -7030,19 +7597,61 @@ function saveAuthToken(token) {
       background: linear-gradient(135deg, #ef4444, #dc2626);
       color: white;
       border: none;
-      padding: 15px 40px;
+      padding: 16px 48px;
       border-radius: 12px;
-      font-size: 16px;
+      font-size: 18px;
       font-weight: 600;
       cursor: pointer;
       transition: all 0.3s ease;
-      box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
       width: 100%;
+      max-width: 500px;
+      margin: 0 auto;
+      display: block;
     }
 
     .end-charging-btn:hover {
       transform: translateY(-2px);
-      box-shadow: 0 6px 12px rgba(239, 68, 68, 0.4);
+      box-shadow: 0 6px 16px rgba(239, 68, 68, 0.5);
+      background: linear-gradient(135deg, #f56565, #e53e3e);
+    }
+
+    .end-charging-btn:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+    }
+
+    /* 響應式設計 */
+    @media (max-width: 768px) {
+      .time-display {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+      }
+      
+      .time-value {
+        font-size: 16px;
+      }
+      
+      #currentAmount {
+        font-size: 18px;
+      }
+      
+      .end-charging-btn {
+        padding: 14px 32px;
+        font-size: 16px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .time-display {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+      
+      .charging-info {
+        margin: 0 10px;
+        padding: 15px;
+      }
     }
   </style>
 
@@ -7072,16 +7681,20 @@ function saveAuthToken(token) {
           <div class="time-item">
             <span class="time-label">開始時間</span>
             <span id="currentTime" class="time-value">00:00:00</span>
-              </div>
+          </div>
           <div class="time-item">
             <span class="time-label">預計結束時間</span>
             <span id="endTime" class="time-value">00:00:00</span>
-              </div>
+          </div>
           <div class="time-item">
             <span class="time-label">充電時長</span>
             <span id="chargingDuration" class="time-value">00:00:00</span>
-              </div>
-            </div>
+          </div>
+          <div class="time-item">
+            <span class="time-label">目前金額</span>
+            <span id="currentAmount" class="time-value">$0</span>
+          </div>
+        </div>
             
         <div class="session-info">
           <span class="session-label">會話ID</span>
