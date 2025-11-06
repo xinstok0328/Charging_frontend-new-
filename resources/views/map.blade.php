@@ -3686,9 +3686,46 @@ function initializeAuthToken() {
         console.log('📥 訂閱回應:', subscribeResult);
 
         if (subscribeResult.success) {
-          alert('訂閱成功！');
-          // 重新載入會員等級數據
-          await loadMembershipData();
+          const data = subscribeResult.data || {};
+          const mid = data.mid;
+          const version = data.version;
+          const tradeInfo = data.trade_info;
+          const tradeSha = data.trade_sha;
+
+          // 檢查是否有付款參數
+          if (mid && version && tradeInfo && tradeSha) {
+            console.log('💳 準備跳轉到付款頁面...');
+            
+            // 動態建立表單送至藍新金流
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = 'https://ccore.newebpay.com/MPG/mpg_gateway';
+
+            const appendHidden = (name, value) => {
+              const input = document.createElement('input');
+              input.type = 'hidden';
+              input.name = name;
+              input.value = value;
+              form.appendChild(input);
+            };
+
+            // 對齊藍新欄位命名
+            appendHidden('MerchantID', mid);
+            appendHidden('Version', version);
+            appendHidden('TradeInfo', tradeInfo);
+            appendHidden('TradeSha', tradeSha);
+
+            document.body.appendChild(form);
+
+            // 關閉會員等級模態框後送出
+            hideMembershipLevel();
+            form.submit();
+          } else {
+            // 如果沒有付款參數，可能是免費方案或已訂閱
+            alert('訂閱成功！');
+            // 重新載入會員等級數據
+            await loadMembershipData();
+          }
         } else {
           throw new Error(subscribeResult.message || '訂閱失敗');
         }
